@@ -1,1 +1,1 @@
-from .configuration_data import ConfigurationData
+from .opena3xx_constants import *

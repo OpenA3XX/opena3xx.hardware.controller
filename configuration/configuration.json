@@ -1,0 +1,17 @@
+{
+    "networking": {
+        "opena3xx.network.interface": "wlan0",
+        "opena3xx.network.scan-range.cidr": "24",
+        "opena3xx.network.keepalive.seconds": "5"
+    },
+    "api": {
+        "opena3xx.peripheral.api.scheme": "http",
+        "opena3xx.peripheral.api.ip": "192.168.50.22",
+        "opena3xx.peripheral.api.port": "5000"
+    },
+    "amqp": {
+        "opena3xx.amqp.host": "opena3xx",
+        "opena3xx.amqp.username": "opena3xx",
+        "opena3xx.amqp.password": "opena3xx"
+    }
+}

@@ -5,6 +5,7 @@ from netaddr import IPNetwork
 import socket
 import requests
 from opena3xx.exceptions import NetworkingException
+from opena3xx.http import OpenA3xxHttpClient
 from opena3xx.models import *
 
 logger = logging.getLogger("default")
@@ -28,11 +29,9 @@ class NetworkingClient:
 
     def __ping_request_target(self, target_ip: str, target_port: int) -> bool:
         try:
-            # Create HTTP API Client and use that one rather here.
             scheme = self.configuration[OPENA3XX_API_SCHEME_CONFIGURATION_NAME]
-            endpoint = f'{scheme}://{target_ip}:{target_port}/core/heartbeat/ping'
-            logger.info(f"Sending request to endpoint: {endpoint}")
-            r = requests.get(endpoint, timeout=10)
+            http_client = OpenA3xxHttpClient()
+            r = http_client.send_ping_request(scheme, target_ip, target_port)
             if r.status_code == 200:
                 if r.text == "Pong from OpenA3XX":
                     logger.info("Received Valid Response from OpenA3XX API - Success")

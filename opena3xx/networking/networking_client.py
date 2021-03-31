@@ -3,16 +3,15 @@ import netifaces as ni
 import logging
 from netaddr import IPNetwork
 import socket
-import requests
 from opena3xx.exceptions import NetworkingException
 from opena3xx.http import OpenA3xxHttpClient
 from opena3xx.models import *
 
-logger = logging.getLogger("default")
-
 
 class NetworkingClient:
     configuration = []
+
+    logger = logging.getLogger("default")
 
     def start_api_discovery(self) -> None:
         try:
@@ -34,7 +33,7 @@ class NetworkingClient:
             r = http_client.send_ping_request(scheme, target_ip, target_port)
             if r.status_code == 200:
                 if r.text == "Pong from OpenA3XX":
-                    logger.info("Received Valid Response from OpenA3XX API - Success")
+                    logging.info("Received Valid Response from OpenA3XX API - Success")
                     return True
             else:
                 logger.info("Invalid Response from OpenA3XX API")

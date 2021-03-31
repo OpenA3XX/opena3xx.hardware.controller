@@ -5,15 +5,16 @@ from requests import Session, Response
 
 from opena3xx.configuration import ConfigurationClient
 from opena3xx.models import *
+from opena3xx.models.opena3xx_models import HardwareBoardDetailsDto
 
 logger = logging.getLogger("default")
 
 
 def log_response(response):
     try:
-        logger.debug(f"Response: {json.dumps(response.json(), indent=4, sort_keys=True)}")
+        logger.info(f"Response: {json.dumps(response.json(), indent=4, sort_keys=True)}")
     except ValueError:
-        logger.debug(f"Response: {response.content}")
+        logger.info(f"Response: {response.content}")
 
 
 class OpenA3xxHttpClient:
@@ -27,7 +28,7 @@ class OpenA3xxHttpClient:
         self.base_url = configuration[OPENA3XX_API_IP_ADDRESS_CONFIGURATION_NAME]
         self.port = int(configuration[OPENA3XX_API_PORT_CONFIGURATION_NAME])
 
-    def send_ping_request(self, scheme: str, target_ip: str, target_port: int) -> Session:
+    def send_ping_request(self, scheme: str, target_ip: str, target_port: int) -> Response:
         endpoint = f'{scheme}://{target_ip}:{target_port}/core/heartbeat/ping'
         logger.info(f"Sending request to endpoint: {endpoint}")
         r = requests.get(endpoint, timeout=10)
@@ -42,3 +43,14 @@ class OpenA3xxHttpClient:
             log_response(r)
             return r.json()
 
+    def get_hardware_board_details(self, hardware_board_id: int) -> HardwareBoardDetailsDto:
+        endpoint = f"{self.scheme}://{self.base_url}:{self.port}/hardware-boards/{hardware_board_id}"
+        logger.info(f"Sending request to endpoint: {endpoint}")
+        r = requests.get(endpoint, timeout=10)
+        if r.status_code == 200:
+            log_response(r)
+            data_dict = json.loads(r.content)
+            hardware_board_details_dto = HardwareBoardDetailsDto(int(data_dict["id"]),
+                                                                 data_dict["name"],
+                                                                 data_dict["ioExtenderBuses"])
+            return hardware_board_details_dto

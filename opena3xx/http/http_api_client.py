@@ -32,7 +32,7 @@ class OpenA3xxHttpClient:
         endpoint = f'{scheme}://{target_ip}:{target_port}/core/heartbeat/ping'
         logger.info(f"Sending request to endpoint: {endpoint}")
         r = requests.get(endpoint, timeout=10)
-        log_response(r)
+        # log_response(r)
         return r
 
     def get_configuration(self) -> Response:
@@ -40,7 +40,7 @@ class OpenA3xxHttpClient:
         logger.info(f"Sending request to endpoint: {endpoint}")
         r = requests.get(endpoint, timeout=10)
         if r.status_code == 200:
-            log_response(r)
+            # log_response(r)
             return r.json()
 
     def get_hardware_board_details(self, hardware_board_id: int) -> HardwareBoardDetailsDto:
@@ -48,7 +48,7 @@ class OpenA3xxHttpClient:
         logger.info(f"Sending request to endpoint: {endpoint}")
         r = requests.get(endpoint, timeout=10)
         if r.status_code == 200:
-            log_response(r)
+            # log_response(r)
             data_dict = json.loads(r.content)
             hardware_board_details_dto = HardwareBoardDetailsDto(int(data_dict["id"]),
                                                                  data_dict["name"],

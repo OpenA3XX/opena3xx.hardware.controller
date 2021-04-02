@@ -1,17 +1,16 @@
 import logging
 
-from RPi import GPIO
-import busio
 import board
-
+import busio
+from RPi import GPIO
 from adafruit_mcp230xx.mcp23017 import MCP23017
-from opena3xx.models import INTERRUPT_EXTENDER_MAP, EXTENDER_ADDRESS_START
-from tabulate import tabulate
-from opena3xx.models import HardwareBoardDetailsDto
-from opena3xx.helpers import parse_bit_from_name
 from digitalio import Direction, Pull
+from tabulate import tabulate
 
-logger = logging.getLogger("default")
+from opena3xx.exceptions import I2CRegistrationException
+from opena3xx.helpers import parse_bit_from_name
+from opena3xx.models import HardwareBoardDetailsDto
+from opena3xx.models import INTERRUPT_EXTENDER_MAP, EXTENDER_ADDRESS_START, DEBOUNCING_TIME
 
 
 class OpenA3XXHardwareService:
@@ -19,7 +18,8 @@ class OpenA3XXHardwareService:
     def __init__(self):
         self.extender_bus_details: list = []
         self.extender_bus_bit_details: list = []
-        self.debouncing_time: int = 80
+        self.debouncing_time: int = DEBOUNCING_TIME
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     def bus_interrupt(self, port):
         _bus = None
@@ -40,7 +40,7 @@ class OpenA3XXHardwareService:
                 if int(pin["bus_bit"]) == int(pin_flag):
                     if not pin["extender_bit_instance"].value:
                         if pin['input_selector_name'] is not None:
-                            logger.warning(f"Hardware Input Selector: {pin['input_selector_name']} ===> Pressed")
+                            self.logger.warning(f"Hardware Input Selector: {pin['input_selector_name']} ===> Pressed")
                         _bus_instance.clear_ints()
                     break
 
@@ -52,9 +52,14 @@ class OpenA3XXHardwareService:
         i2c = busio.I2C(board.SCL, board.SDA)
         # ---------------------------------------------
         for extender in board_details.io_extender_buses:
-            logger.info(f"Registering Extender: Id:{extender.id}, {extender.name} with HEX address: "
+            self.logger.info(f"Registering Bus Extender: Id:{extender.id}, {extender.name} with HEX address: "
                         f"{hex(extender_address_start)}")
-            bus = MCP23017(i2c, address=extender_address_start)
+            try:
+                bus = MCP23017(i2c, address=extender_address_start)
+                self.logger.info(f"Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}: Found")
+            except Exception as ex:
+                self.logger.critical(f"Failed Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}")
+                raise I2CRegistrationException(ex)
 
             extender_data_dict = {"extender_bus_id": extender.id,
                                   "extender_bus_name": extender.name,
@@ -102,5 +107,5 @@ class OpenA3XXHardwareService:
                 bit_counter += 1
             extender_address_start += 1
 
-        logger.info(f"\n{tabulate(self.extender_bus_details, headers='keys', tablefmt='pretty')}")
-        logger.info(f"\n{tabulate(self.extender_bus_bit_details, headers='keys', tablefmt='pretty')}")
+        self.logger.info(f"Extender Bus Details ↓\n{tabulate(self.extender_bus_details, headers='keys', tablefmt='pretty')}")
+        self.logger.info(f"Extender Bus Bit Details ↓\n{tabulate(self.extender_bus_bit_details, headers='keys', tablefmt='pretty')}")

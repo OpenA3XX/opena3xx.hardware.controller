@@ -1,6 +1,6 @@
 from opena3xx.configuration import *
 import netifaces as ni
-import logging
+
 from netaddr import IPNetwork
 import socket
 from opena3xx.exceptions import NetworkingException
@@ -9,13 +9,16 @@ from opena3xx.models import *
 
 
 class NetworkingClient:
-    configuration = []
 
-    logger = logging.getLogger("default")
+    configuration: []
+
+    def __init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self._configuration_client = ConfigurationClient()
 
     def start_api_discovery(self) -> None:
+        self.configuration = self._configuration_client.get_configuration()
         try:
-            self.configuration = ConfigurationClient.get_configuration()
             interface = self.configuration[OPENA3XX_NETWORK_INTERFACE_CONFIGURATION_NAME]
             ip = self.__discover_local_ip_address(interface)
             if not self.configuration[OPENA3XX_API_IP_ADDRESS_CONFIGURATION_NAME]:
@@ -33,17 +36,17 @@ class NetworkingClient:
             r = http_client.send_ping_request(scheme, target_ip, target_port)
             if r.status_code == 200:
                 if r.text == "Pong from OpenA3XX":
-                    logging.info("Received Valid Response from OpenA3XX API - Success")
+                    self.logger.info("Received Valid Response from OpenA3XX API - Success")
                     return True
             else:
-                logger.info("Invalid Response from OpenA3XX API")
+                self.logger.info("Invalid Response from OpenA3XX API")
             return False
         except Exception as ex:
-            logger.critical(ex)
+            self.logger.critical(ex)
             return False
 
     def __scan_network(self, local_ip_address):
-        logger.info("Started Scanning Network")
+        self.logger.info("Started Scanning Network")
         cidr = self.configuration[OPENA3XX_SCAN_CIDR_RANGE_CONFIGURATION_NAME]
         opena3xx_api_port = self.configuration[OPENA3XX_API_PORT_CONFIGURATION_NAME]
         cidr_range = f"{local_ip_address}/{cidr}"
@@ -55,24 +58,23 @@ class NetworkingClient:
             # returns an error indicator
             result = s.connect_ex((target_ip_address, int(opena3xx_api_port)))
             if result == 0:
-                logger.info(f"Found something on IP: {target_ip_address} on Port: {opena3xx_api_port}")
-                logger.info("Sending Ping to check if it is OpenA3XX API")
+                self.logger.info(f"Found something on IP: {target_ip_address} on Port: {opena3xx_api_port}")
+                self.logger.info("Sending Ping to check if it is OpenA3XX API")
                 if self.__ping_request_target(target_ip_address, opena3xx_api_port):
                     self.configuration[OPENA3XX_API_IP_ADDRESS_CONFIGURATION_NAME] = target_ip_address
                     ConfigurationClient.update_configuration(self.configuration)
                     s.close()
                     return True
                 else:
-                    logger.warning(f"Continue scanning: Invalid Response from {target_ip_address}")
+                    self.logger.warning(f"Continue scanning: Invalid Response from {target_ip_address}")
             s.close()
         return False
 
-    @staticmethod
-    def __discover_local_ip_address(interface: str) -> str:
+    def __discover_local_ip_address(self, interface: str) -> str:
         try:
-            logger.info("Discovering Local IP Address")
+            self.logger.info("Discovering Local IP Address")
             ip = ni.ifaddresses(interface)[ni.AF_INET][0]['addr']
-            logger.info(f"Local IP Address is {ip}")
+            self.logger.info(f"Local IP Address is {ip}")
             return ip
         except Exception as ex:
             raise ex

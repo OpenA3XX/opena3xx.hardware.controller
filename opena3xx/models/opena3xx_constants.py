@@ -4,6 +4,8 @@ OPENA3XX_API_PORT_CONFIGURATION_NAME: str = "opena3xx.peripheral.api.port"
 OPENA3XX_API_IP_ADDRESS_CONFIGURATION_NAME: str = "opena3xx.peripheral.api.ip"
 OPENA3XX_API_SCHEME_CONFIGURATION_NAME: str = "opena3xx.peripheral.api.scheme"
 
+DEBOUNCING_TIME = 150
+
 EXTENDER_ADDRESS_START: int = 32
 
 INTERRUPT_EXTENDER_MAP: dict = {

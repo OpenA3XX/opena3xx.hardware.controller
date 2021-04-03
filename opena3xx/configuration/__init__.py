@@ -1,1 +1,1 @@
-from .configuration_client import *
+from .opena3xx_configuration_client import *

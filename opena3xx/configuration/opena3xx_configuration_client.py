@@ -1,23 +1,26 @@
 import json
 import logging
 
+from opena3xx.models import OpenA3XXConfigurationDto
+
 CONFIGURATION_FILE_PATH = "./configuration/configuration.json"
 
 
-class ConfigurationClient:
+class OpenA3XXConfigurationClient:
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def get_configuration(self) -> []:
+    def get_configuration(self) -> OpenA3XXConfigurationDto:
         self.logger.info("Reading Config")
         with open(CONFIGURATION_FILE_PATH, 'r') as file:
             configuration_data = json.load(file)
-        return configuration_data
+        configuration_dto = OpenA3XXConfigurationDto(configuration_data)
 
-    def update_configuration(self, configuration: []):
+        return configuration_dto
+
+    def update_configuration(self, configuration: OpenA3XXConfigurationDto):
         self.logger.info("Updating Config")
         with open(CONFIGURATION_FILE_PATH, 'w') as outfile:
             json.dump(configuration, outfile, indent=4)
         return
-

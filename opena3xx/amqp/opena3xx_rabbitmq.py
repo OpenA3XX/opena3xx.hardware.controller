@@ -4,16 +4,19 @@ import logging
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
 
+from opena3xx.exceptions import OpenA3XXRabbitMqPublishingException
 from opena3xx.http import OpenA3xxHttpClient
 
 
 class OpenA3XXMessagingService:
-    channel: BlockingChannel
+    data_channel: BlockingChannel
+    keepalive_channel: BlockingChannel
 
     def __init__(self):
         http_client = OpenA3xxHttpClient()
         self.configuration_data = http_client.get_configuration()
-        self.rabbitmq_queue = "hardware_events"
+        self.rabbitmq_data_queue = "hardware_events"
+        self.rabbitmq_keepalive_queue = "keep_alive"
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def init_and_start(self):
@@ -30,24 +33,40 @@ class OpenA3XXMessagingService:
                              f"{configuration['opena3xx-amqp-host']}:"
                              f"{configuration['opena3xx-amqp-port']}")
             amqp_connection = pika.BlockingConnection(parameters)
-            self.channel = amqp_connection.channel()
-            self.logger.info(f"Declaring Queue: {self.rabbitmq_queue}")
-            self.channel.queue_declare(queue=self.rabbitmq_queue)
+            self.data_channel = amqp_connection.channel()
+            self.logger.info(f"Declaring Queue: {self.rabbitmq_data_queue}")
+            self.data_channel.queue_declare(queue=self.rabbitmq_data_queue)
+
+            self.keepalive_channel = amqp_connection.channel()
+            self.logger.info(f"Declaring Queue: {self.rabbitmq_keepalive_queue}")
+            self.keepalive_channel.queue_declare(queue=self.rabbitmq_keepalive_queue)
         except Exception as ex:
             raise ex
 
-    @staticmethod
-    def __generate_message(message: str):
-        message = {
-            "hardware_board_id": 1,
-            "message": message
-        }
-        return message
+    def publish_hardware_event(self, hardware_board_id: int, extender_bus_bit_details: dict):
+        try:
+            message = {
+                "hardware_board_id": hardware_board_id,
+                "extender_bit_id": extender_bus_bit_details["extender_bit_id"],
+                "extender_bit_name": extender_bus_bit_details["extender_bit_name"],
+                "extender_bus_id": extender_bus_bit_details["extender_bus_id"],
+                "extender_bus_name": extender_bus_bit_details["extender_bus_name"],
+                "input_selector_name": extender_bus_bit_details["input_selector_name"]
+            }
+            self.keepalive_channel.basic_publish(exchange='',
+                                                 routing_key=self.rabbitmq_data_queue,
+                                                 body=json.dumps(message))
+        except Exception as ex:
+            raise OpenA3XXRabbitMqPublishingException(ex)
 
-    def send_message(self, message):
-        self.channel.basic_publish(exchange='',
-                                   routing_key=self.rabbitmq_queue,
-                                   body=json.dumps(self.__generate_message(message)))
-
-    def keep_alive(self):
-        self.send_message("I am alive")
+    def keep_alive(self, hardware_board_id: int):
+        try:
+            message = {
+                "hardware_board_id": hardware_board_id,
+                "message": "Ping"
+            }
+            self.keepalive_channel.basic_publish(exchange='',
+                                                 routing_key=self.rabbitmq_keepalive_queue,
+                                                 body=json.dumps(message))
+        except Exception as ex:
+            raise OpenA3XXRabbitMqPublishingException(ex)

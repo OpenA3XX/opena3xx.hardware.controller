@@ -1,10 +1,9 @@
 import json
 import logging
 import requests
-from requests import Session, Response
+from requests import Response
 
-from opena3xx.configuration import ConfigurationClient
-from opena3xx.models import *
+from opena3xx.configuration import OpenA3XXConfigurationClient
 from opena3xx.models.opena3xx_models import HardwareBoardDetailsDto
 
 
@@ -14,11 +13,11 @@ class OpenA3xxHttpClient:
     port: int
 
     def __init__(self):
-        configuration_client = ConfigurationClient()
+        configuration_client = OpenA3XXConfigurationClient()
         configuration = configuration_client.get_configuration()
-        self.scheme = configuration[OPENA3XX_API_SCHEME_CONFIGURATION_NAME]
-        self.base_url = configuration[OPENA3XX_API_IP_ADDRESS_CONFIGURATION_NAME]
-        self.port = int(configuration[OPENA3XX_API_PORT_CONFIGURATION_NAME])
+        self.scheme = configuration.opena3xx_peripheral_api_scheme
+        self.base_url = configuration.opena3xx_peripheral_api_ip
+        self.port = int(configuration.opena3xx_peripheral_api_port)
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def send_ping_request(self, scheme: str, target_ip: str, target_port: int) -> Response:

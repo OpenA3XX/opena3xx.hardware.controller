@@ -3,35 +3,35 @@ import netifaces as ni
 
 from netaddr import IPNetwork
 import socket
-from opena3xx.exceptions import NetworkingException
+from opena3xx.exceptions import OpenA3XXNetworkingException
 from opena3xx.http import OpenA3xxHttpClient
 from opena3xx.models import *
 
 
-class NetworkingClient:
+class OpenA3XXNetworkingClient:
 
-    configuration: []
+    configuration: OpenA3XXConfigurationDto
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
-        self._configuration_client = ConfigurationClient()
+        self._configuration_client = OpenA3XXConfigurationClient()
 
     def start_api_discovery(self) -> None:
         self.configuration = self._configuration_client.get_configuration()
         try:
-            interface = self.configuration[OPENA3XX_NETWORK_INTERFACE_CONFIGURATION_NAME]
+            interface = self.configuration.opena3xx_network_interface
             ip = self.__discover_local_ip_address(interface)
-            if not self.configuration[OPENA3XX_API_IP_ADDRESS_CONFIGURATION_NAME]:
+            if not self.configuration.opena3xx_peripheral_api_ip:
                 self.__scan_network(ip)
             else:
-                self.__ping_request_target(self.configuration[OPENA3XX_API_IP_ADDRESS_CONFIGURATION_NAME],
-                                           self.configuration[OPENA3XX_API_PORT_CONFIGURATION_NAME])
+                self.__ping_request_target(self.configuration.opena3xx_peripheral_api_ip,
+                                           self.configuration.opena3xx_peripheral_api_port)
         except Exception as ex:
-            raise NetworkingException(ex)
+            raise OpenA3XXNetworkingException(ex)
 
     def __ping_request_target(self, target_ip: str, target_port: int) -> bool:
         try:
-            scheme = self.configuration[OPENA3XX_API_SCHEME_CONFIGURATION_NAME]
+            scheme = self.configuration.opena3xx_peripheral_api_scheme
             http_client = OpenA3xxHttpClient()
             r = http_client.send_ping_request(scheme, target_ip, target_port)
             if r.status_code == 200:
@@ -47,8 +47,8 @@ class NetworkingClient:
 
     def __scan_network(self, local_ip_address):
         self.logger.info("Started Scanning Network")
-        cidr = self.configuration[OPENA3XX_SCAN_CIDR_RANGE_CONFIGURATION_NAME]
-        opena3xx_api_port = self.configuration[OPENA3XX_API_PORT_CONFIGURATION_NAME]
+        cidr = self.configuration.opena3xx_network_scan_range_cidr
+        opena3xx_api_port = self.configuration.opena3xx_peripheral_api_port
         cidr_range = f"{local_ip_address}/{cidr}"
 
         for ip in IPNetwork(cidr_range):
@@ -61,8 +61,9 @@ class NetworkingClient:
                 self.logger.info(f"Found something on IP: {target_ip_address} on Port: {opena3xx_api_port}")
                 self.logger.info("Sending Ping to check if it is OpenA3XX API")
                 if self.__ping_request_target(target_ip_address, opena3xx_api_port):
-                    self.configuration[OPENA3XX_API_IP_ADDRESS_CONFIGURATION_NAME] = target_ip_address
-                    ConfigurationClient.update_configuration(self.configuration)
+                    self.configuration.opena3xx_peripheral_api_ip = target_ip_address
+                    configuration_client = OpenA3XXConfigurationClient()
+                    configuration_client.update_configuration(self.configuration)
                     s.close()
                     return True
                 else:

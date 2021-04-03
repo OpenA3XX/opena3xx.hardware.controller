@@ -7,7 +7,8 @@ from adafruit_mcp230xx.mcp23017 import MCP23017
 from digitalio import Direction, Pull
 from tabulate import tabulate
 
-from opena3xx.exceptions import I2CRegistrationException
+from opena3xx.amqp import OpenA3XXMessagingService
+from opena3xx.exceptions import OpenA3XXI2CRegistrationException, OpenA3XXRabbitMqPublishingException
 from opena3xx.helpers import parse_bit_from_name
 from opena3xx.models import HardwareBoardDetailsDto
 from opena3xx.models import INTERRUPT_EXTENDER_MAP, EXTENDER_ADDRESS_START, DEBOUNCING_TIME
@@ -15,11 +16,13 @@ from opena3xx.models import INTERRUPT_EXTENDER_MAP, EXTENDER_ADDRESS_START, DEBO
 
 class OpenA3XXHardwareService:
 
-    def __init__(self):
+    def __init__(self, messaging_service: OpenA3XXMessagingService, hardware_board_id: int):
         self.extender_bus_details: list = []
         self.extender_bus_bit_details: list = []
         self.debouncing_time: int = DEBOUNCING_TIME
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.messaging_service: OpenA3XXMessagingService = messaging_service
+        self.hardware_board_id = hardware_board_id
 
     def bus_interrupt(self, port):
         _bus = None
@@ -40,7 +43,11 @@ class OpenA3XXHardwareService:
                 if int(pin["bus_bit"]) == int(pin_flag):
                     if not pin["extender_bit_instance"].value:
                         if pin['input_selector_name'] is not None:
-                            self.logger.warning(f"Hardware Input Selector: {pin['input_selector_name']} ===> Pressed")
+                            try:
+                                self.messaging_service.publish_hardware_event(self.hardware_board_id, pin)
+                                self.logger.warning(f"Hardware Input Selector: {pin['input_selector_name']} ===> Pressed")
+                            except OpenA3XXRabbitMqPublishingException as ex:
+                                raise ex
                         _bus_instance.clear_ints()
                     break
 
@@ -59,7 +66,7 @@ class OpenA3XXHardwareService:
                 self.logger.info(f"Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}: Found")
             except Exception as ex:
                 self.logger.critical(f"Failed Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}")
-                raise I2CRegistrationException(ex)
+                raise OpenA3XXI2CRegistrationException(ex)
 
             extender_data_dict = {"extender_bus_id": extender.id,
                                   "extender_bus_name": extender.name,

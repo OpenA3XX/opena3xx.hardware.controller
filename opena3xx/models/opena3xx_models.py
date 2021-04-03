@@ -28,3 +28,20 @@ class HardwareBoardDetailsDto:
             self.io_extender_buses.append(IOExtenderBusDto(int(extender_bus["id"]),
                                                            extender_bus["name"],
                                                            extender_bus["ioExtenderBusBits"]))
+
+
+class OpenA3XXConfigurationDto:
+    def __init__(self, configuration_dict: []):
+        self.opena3xx_network_interface = configuration_dict["opena3xx-network-interface"]
+        self.opena3xx_network_scan_range_cidr = configuration_dict["opena3xx-network-interface"]
+        self.opena3xx_peripheral_api_scheme = configuration_dict["opena3xx-peripheral-api-scheme"]
+        self.opena3xx_peripheral_api_ip = configuration_dict["opena3xx-peripheral-api-ip"]
+        self.opena3xx_peripheral_api_port = configuration_dict["opena3xx-peripheral-api-port"]
+        self.opena3xx_peripheral_keepalive_seconds = configuration_dict["opena3xx-peripheral-keepalive-seconds"]
+        self.opena3xx_amqp_host = configuration_dict["opena3xx-amqp-host"]
+        self.opena3xx_amqp_username = configuration_dict["opena3xx-amqp-username"]
+        self.opena3xx_amqp_password = configuration_dict["opena3xx-amqp-password"]
+
+
+
+

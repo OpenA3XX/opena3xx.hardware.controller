@@ -15,8 +15,8 @@ class OpenA3XXMessagingService:
     def __init__(self):
         http_client = OpenA3xxHttpClient()
         self.configuration_data = http_client.get_configuration()
-        self.rabbitmq_data_queue = "hardware_events"
-        self.rabbitmq_keepalive_queue = "keep_alive"
+        self.rabbitmq_data_queue = ""
+        self.rabbitmq_keepalive_queue = ""
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def init_and_start(self):
@@ -29,6 +29,9 @@ class OpenA3XXMessagingService:
                                                    configuration["opena3xx-amqp-port"],
                                                    configuration["opena3xx-amqp-vhost"],
                                                    credentials)
+            self.rabbitmq_data_queue = configuration["opena3xx-amqp-hardware-input-selector-events-queue-name"]
+            self.rabbitmq_keepalive_queue = configuration["opena3xx-amqp-keepalive-queue-name"]
+
             self.logger.info(f"Connecting to AMQP Server on host: "
                              f"{configuration['opena3xx-amqp-host']}:"
                              f"{configuration['opena3xx-amqp-port']}")

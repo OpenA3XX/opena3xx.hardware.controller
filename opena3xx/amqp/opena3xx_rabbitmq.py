@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import logging
 
@@ -54,7 +55,8 @@ class OpenA3XXMessagingService:
                 "extender_bit_name": extender_bus_bit_details["extender_bit_name"],
                 "extender_bus_id": extender_bus_bit_details["extender_bus_id"],
                 "extender_bus_name": extender_bus_bit_details["extender_bus_name"],
-                "input_selector_name": extender_bus_bit_details["input_selector_name"]
+                "input_selector_name": extender_bus_bit_details["input_selector_name"],
+                "timestamp": str(datetime.utcnow())
             }
             self.keepalive_channel.basic_publish(exchange='',
                                                  routing_key=self.rabbitmq_data_queue,
@@ -65,6 +67,7 @@ class OpenA3XXMessagingService:
     def keep_alive(self, hardware_board_id: int):
         try:
             message = {
+                "timestamp": str(datetime.utcnow()),
                 "hardware_board_id": hardware_board_id,
                 "message": "Ping"
             }

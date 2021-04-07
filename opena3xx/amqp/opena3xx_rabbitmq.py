@@ -4,6 +4,7 @@ import logging
 
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
+from pika.exchange_type import ExchangeType
 
 from opena3xx.exceptions import OpenA3XXRabbitMqPublishingException
 from opena3xx.http import OpenA3xxHttpClient
@@ -16,8 +17,8 @@ class OpenA3XXMessagingService:
     def __init__(self):
         http_client = OpenA3xxHttpClient()
         self.configuration_data = http_client.get_configuration()
-        self.rabbitmq_data_queue = ""
-        self.rabbitmq_keepalive_queue = ""
+        self.rabbitmq_data_exchange = ""
+        self.rabbitmq_keepalive_exchange = ""
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def init_and_start(self):
@@ -30,20 +31,20 @@ class OpenA3XXMessagingService:
                                                    configuration["opena3xx-amqp-port"],
                                                    configuration["opena3xx-amqp-vhost"],
                                                    credentials)
-            self.rabbitmq_data_queue = configuration["opena3xx-amqp-hardware-input-selector-events-queue-name"]
-            self.rabbitmq_keepalive_queue = configuration["opena3xx-amqp-keepalive-queue-name"]
+            self.rabbitmq_data_exchange = "opena3xx.hardware_events.input_selectors"
+            self.rabbitmq_keepalive_exchange = "opena3xx.hardware_boards.keep_alive"
 
             self.logger.info(f"Connecting to AMQP Server on host: "
                              f"{configuration['opena3xx-amqp-host']}:"
                              f"{configuration['opena3xx-amqp-port']}")
             amqp_connection = pika.BlockingConnection(parameters)
             self.data_channel = amqp_connection.channel()
-            self.logger.info(f"Declaring Queue: {self.rabbitmq_data_queue}")
-            self.data_channel.queue_declare(queue=self.rabbitmq_data_queue)
+            #self.logger.info(f"Declaring Exchange: {self.rabbitmq_data_exchange}")
+            #self.data_channel.exchange_declare(exchange=self.rabbitmq_data_exchange)
 
             self.keepalive_channel = amqp_connection.channel()
-            self.logger.info(f"Declaring Queue: {self.rabbitmq_keepalive_queue}")
-            self.keepalive_channel.queue_declare(queue=self.rabbitmq_keepalive_queue)
+            #self.logger.info(f"Declaring Exchange: {self.rabbitmq_keepalive_exchange}")
+            #self.keepalive_channel.exchange_declare(exchange=self.rabbitmq_keepalive_exchange)
         except Exception as ex:
             raise ex
 
@@ -58,9 +59,9 @@ class OpenA3XXMessagingService:
                 "input_selector_name": extender_bus_bit_details["input_selector_name"],
                 "timestamp": str(datetime.utcnow())
             }
-            self.keepalive_channel.basic_publish(exchange='',
-                                                 routing_key=self.rabbitmq_data_queue,
-                                                 body=json.dumps(message))
+            self.data_channel.basic_publish(exchange=f"{self.rabbitmq_data_exchange}",
+                                            routing_key="*",
+                                            body=json.dumps(message))
         except Exception as ex:
             raise OpenA3XXRabbitMqPublishingException(ex)
 
@@ -71,8 +72,8 @@ class OpenA3XXMessagingService:
                 "hardware_board_id": hardware_board_id,
                 "message": "Ping"
             }
-            self.keepalive_channel.basic_publish(exchange='',
-                                                 routing_key=self.rabbitmq_keepalive_queue,
+            self.keepalive_channel.basic_publish(exchange=self.rabbitmq_keepalive_exchange,
+                                                 routing_key='*',
                                                  body=json.dumps(message))
         except Exception as ex:
             raise OpenA3XXRabbitMqPublishingException(ex)

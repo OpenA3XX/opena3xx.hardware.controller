@@ -94,8 +94,10 @@ class OpenA3XXHardwareService:
                                               bus_bit=bus_bit,
                                               is_input=True if extender_bit.hardware_input_selector_fullname is not None else False,
                                               input_selector_name=extender_bit.hardware_input_selector_fullname,
+                                              input_selector_id=extender_bit.hardware_input_selector_id,
                                               is_output=True if extender_bit.hardware_output_selector_fullname is not None else False,
                                               output_selector_name=extender_bit.hardware_output_selector_fullname,
+                                              output_selector_id=extender_bit.hardware_output_selector_id,
                                               extender_bit_instance=pin)
 
                 # Set Default Input Mode to Output. Not doing this will cause abnormal interrupts which are caused

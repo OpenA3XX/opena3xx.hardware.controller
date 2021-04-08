@@ -57,6 +57,7 @@ class OpenA3XXMessagingService:
                 "extender_bus_id": extender_bus_bit_details["extender_bus_id"],
                 "extender_bus_name": extender_bus_bit_details["extender_bus_name"],
                 "input_selector_name": extender_bus_bit_details["input_selector_name"],
+                "input_selector_id": extender_bus_bit_details["input_selector_id"],
                 "timestamp": str(datetime.utcnow())
             }
             self.data_channel.basic_publish(exchange=f"{self.rabbitmq_data_exchange}",

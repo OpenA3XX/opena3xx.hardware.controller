@@ -44,11 +44,15 @@ class OpenA3XXHardwareService:
                     if not pin["extender_bit_instance"].value:
                         if pin['input_selector_name'] is not None:
                             try:
+                                _bus_instance.clear_ints()
+                                GPIO.output(4, GPIO.HIGH)
                                 self.messaging_service.publish_hardware_event(self.hardware_board_id, pin)
-                                self.logger.warning(f"Hardware Input Selector: {pin['input_selector_name']} ===> Pressed")
+                                GPIO.output(4, GPIO.LOW)
+                                self.logger.warning(
+                                    f"Hardware Input Selector: {pin['input_selector_name']} ===> Pressed")
                             except OpenA3XXRabbitMqPublishingException as ex:
+                                GPIO.output(17, GPIO.HIGH)
                                 raise ex
-                        _bus_instance.clear_ints()
                     break
 
     def init_and_start(self, board_details: HardwareBoardDetailsDto):
@@ -60,19 +64,27 @@ class OpenA3XXHardwareService:
         # ---------------------------------------------
         for extender in board_details.io_extender_buses:
             self.logger.info(f"Registering Bus Extender: Id:{extender.id}, {extender.name} with HEX address: "
-                        f"{hex(extender_address_start)}")
+                             f"{hex(extender_address_start)}")
             try:
                 bus = MCP23017(i2c, address=extender_address_start)
-                self.logger.info(f"Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}: Found")
+                self.logger.info(
+                    f"Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}: Found")
             except Exception as ex:
-                self.logger.critical(f"Failed Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}")
+                self.logger.critical(
+                    f"Failed Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}")
                 raise OpenA3XXI2CRegistrationException(ex)
 
             extender_data_dict = {"extender_bus_id": extender.id,
                                   "extender_bus_name": extender.name,
                                   "bus_instance": bus,
                                   "interrupt_pin": INTERRUPT_EXTENDER_MAP[extender.name]}
+
             GPIO.setup(int(extender_data_dict["interrupt_pin"]), GPIO.IN, GPIO.PUD_UP)
+            GPIO.setup(17, GPIO.OUT)
+            GPIO.setup(4, GPIO.OUT)
+            GPIO.output(17, GPIO.LOW)
+            GPIO.output(4, GPIO.LOW)
+
             GPIO.add_event_detect(int(extender_data_dict["interrupt_pin"]),
                                   GPIO.FALLING,
                                   callback=self.bus_interrupt,
@@ -83,7 +95,7 @@ class OpenA3XXHardwareService:
             bus.interrupt_configuration = 0x0000  # interrupt on any change
             bus.io_control = 0x44  # Interrupt as open drain and mirrored
             bus.clear_ints()  # Interrupts need to be cleared initially
-            bus.default_value = 0xFFFF
+            # bus.default_value = 0xFFFF
 
             bit_counter = 0
             for extender_bit in extender.io_extender_bus_bits:
@@ -116,5 +128,7 @@ class OpenA3XXHardwareService:
                 bit_counter += 1
             extender_address_start += 1
 
-        self.logger.info(f"Extender Bus Details ↓\n{tabulate(self.extender_bus_details, headers='keys', tablefmt='pretty')}")
-        self.logger.info(f"Extender Bus Bit Details ↓\n{tabulate(self.extender_bus_bit_details, headers='keys', tablefmt='pretty')}")
+        self.logger.info(
+            f"Extender Bus Details ↓\n{tabulate(self.extender_bus_details, headers='keys', tablefmt='pretty')}")
+        self.logger.info(
+            f"Extender Bus Bit Details ↓\n{tabulate(self.extender_bus_bit_details, headers='keys', tablefmt='pretty')}")

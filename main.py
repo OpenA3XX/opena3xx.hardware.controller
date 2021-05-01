@@ -26,6 +26,7 @@ def screen_clear():
 @click.command()
 @click.option('--hardware-board-id', 'hardware_board_id', help="Hardware Board Identifier")
 def main(hardware_board_id: int):
+    GPIO.cleanup()
     print("------------------------------------------------------------------------------------------------------")
     tprint("OPENA3XX")
     tprint("Hardware Controller", font="cybermedium")
@@ -51,7 +52,7 @@ def main(hardware_board_id: int):
 
             while True:
                 rabbitmq_client.keep_alive(hardware_board_id)
-                time.sleep(30)
+                time.sleep(5)
 
         else:
             logger.critical(f"Hardware Board with Id: {hardware_board_id} seems to be invalid. No Response for "

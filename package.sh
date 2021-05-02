@@ -1,0 +1,1 @@
+ pyinstaller --add-data="configuration/*:./configuration/" main.py

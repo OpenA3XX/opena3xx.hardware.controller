@@ -11,5 +11,5 @@ RPi.GPIO==0.7.0
 adafruit-blinka==6.6.0
 adafruit-circuitpython-busdevice==5.0.6
 adafruit-circuitpython-mcp230xx==2.4.5
-Adafruit-PlatformDetect==3.8.0
+Adafruit-PlatformDetect==3.13.0
 Adafruit-PureIO==1.1.8

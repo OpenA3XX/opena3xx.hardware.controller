@@ -1,6 +1,7 @@
 import logging
 
 import board
+import time
 import busio
 from RPi import GPIO
 from adafruit_mcp230xx.mcp23017 import MCP23017
@@ -10,7 +11,8 @@ from tabulate import tabulate
 from opena3xx.amqp import OpenA3XXMessagingService
 from opena3xx.exceptions import OpenA3XXI2CRegistrationException, OpenA3XXRabbitMqPublishingException
 from opena3xx.helpers import parse_bit_from_name
-from opena3xx.models import HardwareBoardDetailsDto
+from opena3xx.models import HardwareBoardDetailsDto, MESSAGING_LED, FAULT_LED, GENERAL_LED, EXTENDER_CHIPS_RESET, \
+    INPUT_SWITCH
 from opena3xx.models import INTERRUPT_EXTENDER_MAP, EXTENDER_ADDRESS_START, DEBOUNCING_TIME
 
 
@@ -61,6 +63,19 @@ class OpenA3XXHardwareService:
         # ---------------------------------------------
         # Initialize the I2C bus:
         i2c = busio.I2C(board.SCL, board.SDA)
+
+        GPIO.setup(MESSAGING_LED, GPIO.OUT)
+        GPIO.setup(FAULT_LED, GPIO.OUT)
+        GPIO.setup(GENERAL_LED, GPIO.OUT)
+        GPIO.setup(EXTENDER_CHIPS_RESET, GPIO.OUT)
+        GPIO.setup(INPUT_SWITCH, GPIO.IN)
+
+        self.logger.info("Resetting MCP23017 ICs Reset Pin: Started")
+        GPIO.output(EXTENDER_CHIPS_RESET, GPIO.LOW)
+        time.sleep(1)
+        GPIO.output(EXTENDER_CHIPS_RESET, GPIO.HIGH)
+        self.logger.info("Resetting MCP23017 ICs Reset Pin: Started")
+
         # ---------------------------------------------
         for extender in board_details.io_extender_buses:
             self.logger.info(f"Registering Bus Extender: Id:{extender.id}, {extender.name} with HEX address: "
@@ -80,10 +95,6 @@ class OpenA3XXHardwareService:
                                   "interrupt_pin": INTERRUPT_EXTENDER_MAP[extender.name]}
 
             GPIO.setup(int(extender_data_dict["interrupt_pin"]), GPIO.IN, GPIO.PUD_UP)
-            GPIO.setup(17, GPIO.OUT)
-            GPIO.setup(4, GPIO.OUT)
-            GPIO.output(17, GPIO.LOW)
-            GPIO.output(4, GPIO.LOW)
 
             GPIO.add_event_detect(int(extender_data_dict["interrupt_pin"]),
                                   GPIO.FALLING,

@@ -3,11 +3,13 @@ import json
 import logging
 
 import pika
+from RPi import GPIO
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exchange_type import ExchangeType
 
 from opena3xx.exceptions import OpenA3XXRabbitMqPublishingException
 from opena3xx.http import OpenA3xxHttpClient
+from opena3xx.models import FAULT_LED
 
 
 class OpenA3XXMessagingService:
@@ -66,6 +68,7 @@ class OpenA3XXMessagingService:
             self.data_channel.basic_publish(exchange=f"{self.rabbitmq_data_exchange}",
                                             routing_key="*",
                                             body=json.dumps(message))
+            GPIO.output(FAULT_LED, GPIO.LOW)
         except Exception as ex:
             raise OpenA3XXRabbitMqPublishingException(ex)
 
@@ -82,5 +85,6 @@ class OpenA3XXMessagingService:
             self.keepalive_channel.basic_publish(exchange=self.rabbitmq_keepalive_exchange,
                                                  routing_key='*',
                                                  body=json.dumps(message))
+            GPIO.output(FAULT_LED, GPIO.LOW)
         except Exception as ex:
             raise OpenA3XXRabbitMqPublishingException(ex)

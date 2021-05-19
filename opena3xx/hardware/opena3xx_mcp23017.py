@@ -10,6 +10,7 @@ from tabulate import tabulate
 
 from opena3xx.amqp import OpenA3XXMessagingService
 from opena3xx.exceptions import OpenA3XXI2CRegistrationException, OpenA3XXRabbitMqPublishingException
+from opena3xx.hardware.opena3xx_lights import OpenA3XXHardwareLightsService
 from opena3xx.helpers import parse_bit_from_name
 from opena3xx.models import HardwareBoardDetailsDto, MESSAGING_LED, FAULT_LED, GENERAL_LED, EXTENDER_CHIPS_RESET, \
     INPUT_SWITCH
@@ -73,9 +74,7 @@ class OpenA3XXHardwareService:
         GPIO.setup(EXTENDER_CHIPS_RESET, GPIO.OUT)
         GPIO.setup(INPUT_SWITCH, GPIO.IN)
 
-        GPIO.output(MESSAGING_LED, GPIO.LOW)
-        GPIO.output(FAULT_LED, GPIO.LOW)
-        GPIO.output(GENERAL_LED, GPIO.LOW)
+        OpenA3XXHardwareLightsService.init_pattern()
 
         self.logger.info("Resetting MCP23017 ICs Reset Pin: Started")
         GPIO.output(EXTENDER_CHIPS_RESET, GPIO.LOW)

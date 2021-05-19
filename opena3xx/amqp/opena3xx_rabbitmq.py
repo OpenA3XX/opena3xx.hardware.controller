@@ -50,6 +50,9 @@ class OpenA3XXMessagingService:
 
     def publish_hardware_event(self, hardware_board_id: int, extender_bus_bit_details: dict):
         try:
+            if self.data_channel.is_closed:
+                self.init_and_start()
+
             message = {
                 "hardware_board_id": hardware_board_id,
                 "extender_bit_id": extender_bus_bit_details["extender_bit_id"],
@@ -67,6 +70,9 @@ class OpenA3XXMessagingService:
             raise OpenA3XXRabbitMqPublishingException(ex)
 
     def keep_alive(self, hardware_board_id: int):
+
+        if self.keepalive_channel.is_closed:
+            self.init_and_start()
         try:
             message = {
                 "timestamp": str(datetime.utcnow()),

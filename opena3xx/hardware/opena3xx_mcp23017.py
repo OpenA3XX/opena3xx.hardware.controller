@@ -27,9 +27,11 @@ class OpenA3XXHardwareService:
         self.hardware_board_id = hardware_board_id
 
     def bus_interrupt(self, port):
+        GPIO.output(GENERAL_LED, GPIO.HIGH)
         _bus = None
         _bus_instance = None
         _bus_pins = []
+
         for bus in self.extender_bus_details:
             if int(bus["interrupt_pin"]) == int(port):
                 _bus = bus
@@ -47,15 +49,16 @@ class OpenA3XXHardwareService:
                         if pin['input_selector_name'] is not None:
                             try:
                                 _bus_instance.clear_ints()
-                                GPIO.output(4, GPIO.HIGH)
+                                GPIO.output(MESSAGING_LED, GPIO.HIGH)
                                 self.messaging_service.publish_hardware_event(self.hardware_board_id, pin)
-                                GPIO.output(4, GPIO.LOW)
+                                GPIO.output(MESSAGING_LED, GPIO.LOW)
                                 self.logger.warning(
                                     f"Hardware Input Selector: {pin['input_selector_name']} ===> Pressed")
                             except OpenA3XXRabbitMqPublishingException as ex:
-                                GPIO.output(17, GPIO.HIGH)
+                                GPIO.output(FAULT_LED, GPIO.HIGH)
                                 raise ex
                     break
+        GPIO.output(GENERAL_LED, GPIO.LOW)
 
     def init_and_start(self, board_details: HardwareBoardDetailsDto):
         GPIO.setmode(GPIO.BCM)
@@ -70,18 +73,26 @@ class OpenA3XXHardwareService:
         GPIO.setup(EXTENDER_CHIPS_RESET, GPIO.OUT)
         GPIO.setup(INPUT_SWITCH, GPIO.IN)
 
+        GPIO.output(MESSAGING_LED, GPIO.LOW)
+        GPIO.output(FAULT_LED, GPIO.LOW)
+        GPIO.output(GENERAL_LED, GPIO.LOW)
+
         self.logger.info("Resetting MCP23017 ICs Reset Pin: Started")
         GPIO.output(EXTENDER_CHIPS_RESET, GPIO.LOW)
         time.sleep(1)
         GPIO.output(EXTENDER_CHIPS_RESET, GPIO.HIGH)
+        time.sleep(1)
         self.logger.info("Resetting MCP23017 ICs Reset Pin: Started")
 
         # ---------------------------------------------
         for extender in board_details.io_extender_buses:
+
             self.logger.info(f"Registering Bus Extender: Id:{extender.id}, {extender.name} with HEX address: "
                              f"{hex(extender_address_start)}")
             try:
+                GPIO.output(GENERAL_LED, GPIO.HIGH)
                 bus = MCP23017(i2c, address=extender_address_start)
+                GPIO.output(GENERAL_LED, GPIO.LOW)
                 self.logger.info(
                     f"Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}: Found")
             except Exception as ex:
@@ -106,7 +117,7 @@ class OpenA3XXHardwareService:
             bus.interrupt_configuration = 0x0000  # interrupt on any change
             bus.io_control = 0x44  # Interrupt as open drain and mirrored
             bus.clear_ints()  # Interrupts need to be cleared initially
-            # bus.default_value = 0xFFFF
+            bus.default_value = 0x0000
 
             bit_counter = 0
             for extender_bit in extender.io_extender_bus_bits:

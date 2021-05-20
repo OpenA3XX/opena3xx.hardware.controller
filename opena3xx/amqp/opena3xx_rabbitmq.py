@@ -24,7 +24,6 @@ class OpenA3XXMessagingService:
 
     def init_and_start(self):
         try:
-            GPIO.output(MESSAGING_LED, GPIO.HIGH)
             self.logger.info("RabbitMQ Connection Init Start: Started")
             configuration = self.configuration_data["configuration"]
 
@@ -50,7 +49,7 @@ class OpenA3XXMessagingService:
             self.logger.info("RabbitMQ Connection Init Start: Completed")
             #self.logger.info(f"Declaring Exchange: {self.rabbitmq_keepalive_exchange}")
             #self.keepalive_channel.exchange_declare(exchange=self.rabbitmq_keepalive_exchange)
-            GPIO.output(MESSAGING_LED, GPIO.LOW)
+            #GPIO.output(MESSAGING_LED, GPIO.LOW)
 
         except Exception as ex:
             raise ex
@@ -59,7 +58,9 @@ class OpenA3XXMessagingService:
         try:
             if self.data_channel.is_closed:
                 self.logger.critical("Data Channel is closed!")
+                GPIO.output(MESSAGING_LED, GPIO.HIGH)
                 self.init_and_start()
+                GPIO.output(MESSAGING_LED, GPIO.LOW)
 
             message = {
                 "hardware_board_id": hardware_board_id,
@@ -82,7 +83,10 @@ class OpenA3XXMessagingService:
 
         if self.keepalive_channel.is_closed:
             self.logger.critical("Keep Alive Channel is closed!")
+            GPIO.output(MESSAGING_LED, GPIO.HIGH)
             self.init_and_start()
+            GPIO.output(MESSAGING_LED, GPIO.LOW)
+            
         try:
             message = {
                 "timestamp": str(datetime.utcnow()),

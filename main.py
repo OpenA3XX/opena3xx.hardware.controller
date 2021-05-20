@@ -96,14 +96,6 @@ def start(hardware_board_id: int):
         try:
             logger.info("OpenA3XX Hardware Controller Started")
 
-            GPIO.setup(MESSAGING_LED, GPIO.OUT)
-            GPIO.setup(FAULT_LED, GPIO.OUT)
-            GPIO.setup(GENERAL_LED, GPIO.OUT)
-            GPIO.setup(EXTENDER_CHIPS_RESET, GPIO.OUT)
-            GPIO.setup(INPUT_SWITCH, GPIO.IN)
-
-            OpenA3XXHardwareLightsService.init_pattern()
-            
             main(hardware_board_id)
         except Exception:
             logger.warning("Restarting OpenA3XX Hardware Controller in 5 seconds...")

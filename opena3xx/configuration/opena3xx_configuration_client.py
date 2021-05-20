@@ -1,9 +1,11 @@
 import json
 import logging
 
+import pathlib
+
 from opena3xx.models import OpenA3XXConfigurationDto
 
-CONFIGURATION_FILE_PATH = "./configuration/configuration.json"
+CONFIGURATION_FILE_PATH = f"{pathlib.Path().absolute()}/configuration/configuration.json"
 
 
 class OpenA3XXConfigurationClient:
@@ -12,7 +14,7 @@ class OpenA3XXConfigurationClient:
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def get_configuration(self) -> OpenA3XXConfigurationDto:
-        self.logger.info("Reading Config")
+        self.logger.info(f"Reading Config from {CONFIGURATION_FILE_PATH}")
         with open(CONFIGURATION_FILE_PATH, 'r') as file:
             configuration_data = json.load(file)
         configuration_dto = OpenA3XXConfigurationDto(configuration_data)

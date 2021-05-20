@@ -7,7 +7,7 @@ import os
 
 from opena3xx.models import OpenA3XXConfigurationDto
 
-CONFIGURATION_FILE_PATH = f"{os.getcwd()}/configuration/configuration.json"
+CONFIGURATION_FILE_PATH = f"/home/pi/opena3xx.hardware.controller/configuration/configuration.json"
 
 
 class OpenA3XXConfigurationClient:

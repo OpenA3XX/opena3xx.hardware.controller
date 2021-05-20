@@ -64,17 +64,21 @@ def main(hardware_board_id: int):
                             f"OpenA3XX Peripheral API")
 
     except OpenA3XXNetworkingException as ex:
+        GPIO.output(FAULT_LED, GPIO.HIGH)
         logger.critical(f"Networking Exception occurred with message {ex}")
         raise
     except OpenA3XXI2CRegistrationException as ex:
+        GPIO.output(FAULT_LED, GPIO.HIGH)
         logger.critical(f"MCP23017 registration failed with message {ex}. "
                         f"This is normally caused because the hardware board "
                         f"does not contain all the required extenders")
         raise
     except OpenA3XXRabbitMqPublishingException as ex:
+        GPIO.output(FAULT_LED, GPIO.HIGH)
         logger.critical(f"Publishing Hardware Event to RabbitMQ Queue Failed: {ex}")
         raise
     except Exception as ex:
+        GPIO.output(FAULT_LED, GPIO.HIGH)
         logger.critical(f"General Exception occurred with message {ex}")
         raise
 
@@ -93,7 +97,6 @@ def start(hardware_board_id: int):
             main(hardware_board_id)
         except Exception:
             logger.warning("Restarting OpenA3XX Hardware Controller in 5 seconds...")
-            GPIO.cleanup()
             time.sleep(5)
             logger.warning("Restarting Now.")
 

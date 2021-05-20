@@ -5,7 +5,6 @@ import logging
 import pika
 from RPi import GPIO
 from pika.adapters.blocking_connection import BlockingChannel
-from pika.exchange_type import ExchangeType
 
 from opena3xx.exceptions import OpenA3XXRabbitMqPublishingException
 from opena3xx.http import OpenA3xxHttpClient
@@ -25,6 +24,7 @@ class OpenA3XXMessagingService:
 
     def init_and_start(self):
         try:
+            self.logger.info("RabbitMQ Connection Init Start: Started")
             configuration = self.configuration_data["configuration"]
 
             credentials = pika.PlainCredentials(configuration["opena3xx-amqp-username"],
@@ -45,6 +45,8 @@ class OpenA3XXMessagingService:
             #self.data_channel.exchange_declare(exchange=self.rabbitmq_data_exchange)
 
             self.keepalive_channel = amqp_connection.channel()
+
+            self.logger.info("RabbitMQ Connection Init Start: Completed")
             #self.logger.info(f"Declaring Exchange: {self.rabbitmq_keepalive_exchange}")
             #self.keepalive_channel.exchange_declare(exchange=self.rabbitmq_keepalive_exchange)
         except Exception as ex:
@@ -53,6 +55,7 @@ class OpenA3XXMessagingService:
     def publish_hardware_event(self, hardware_board_id: int, extender_bus_bit_details: dict):
         try:
             if self.data_channel.is_closed:
+                self.logger.critical("Data Channel is closed!")
                 self.init_and_start()
 
             message = {
@@ -75,6 +78,7 @@ class OpenA3XXMessagingService:
     def keep_alive(self, hardware_board_id: int):
 
         if self.keepalive_channel.is_closed:
+            self.logger.critical("Keep Alive Channel is closed!")
             self.init_and_start()
         try:
             message = {

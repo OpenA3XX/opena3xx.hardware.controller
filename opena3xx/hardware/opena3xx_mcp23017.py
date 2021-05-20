@@ -68,13 +68,6 @@ class OpenA3XXHardwareService:
         # Initialize the I2C bus:
         i2c = busio.I2C(board.SCL, board.SDA)
 
-        GPIO.setup(MESSAGING_LED, GPIO.OUT)
-        GPIO.setup(FAULT_LED, GPIO.OUT)
-        GPIO.setup(GENERAL_LED, GPIO.OUT)
-        GPIO.setup(EXTENDER_CHIPS_RESET, GPIO.OUT)
-        GPIO.setup(INPUT_SWITCH, GPIO.IN)
-
-        OpenA3XXHardwareLightsService.init_pattern()
 
         self.logger.info("Resetting MCP23017 ICs Reset Pin: Started")
         GPIO.output(EXTENDER_CHIPS_RESET, GPIO.LOW)

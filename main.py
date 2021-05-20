@@ -9,9 +9,10 @@ from tabulate import tabulate
 from opena3xx.amqp import OpenA3XXMessagingService
 from opena3xx.exceptions import OpenA3XXNetworkingException, OpenA3XXI2CRegistrationException, \
     OpenA3XXRabbitMqPublishingException
+from opena3xx.hardware.opena3xx_lights import OpenA3XXHardwareLightsService
 from opena3xx.hardware.opena3xx_mcp23017 import OpenA3XXHardwareService
 from opena3xx.logging import log_init
-from opena3xx.models import FAULT_LED
+from opena3xx.models import FAULT_LED, MESSAGING_LED, GENERAL_LED
 from opena3xx.networking import OpenA3XXNetworkingClient, OpenA3xxHttpClient, INPUT_SWITCH, EXTENDER_CHIPS_RESET
 
 log_init()
@@ -94,6 +95,15 @@ def start(hardware_board_id: int):
     while True:
         try:
             logger.info("OpenA3XX Hardware Controller Started")
+
+            GPIO.setup(MESSAGING_LED, GPIO.OUT)
+            GPIO.setup(FAULT_LED, GPIO.OUT)
+            GPIO.setup(GENERAL_LED, GPIO.OUT)
+            GPIO.setup(EXTENDER_CHIPS_RESET, GPIO.OUT)
+            GPIO.setup(INPUT_SWITCH, GPIO.IN)
+
+            OpenA3XXHardwareLightsService.init_pattern()
+            
             main(hardware_board_id)
         except Exception:
             logger.warning("Restarting OpenA3XX Hardware Controller in 5 seconds...")

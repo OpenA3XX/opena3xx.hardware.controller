@@ -86,7 +86,7 @@ class OpenA3XXMessagingService:
             GPIO.output(MESSAGING_LED, GPIO.HIGH)
             self.init_and_start()
             GPIO.output(MESSAGING_LED, GPIO.LOW)
-            
+
         try:
             message = {
                 "timestamp": str(datetime.utcnow()),

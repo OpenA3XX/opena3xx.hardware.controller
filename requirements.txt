@@ -1,7 +1,7 @@
 art==5.4
 seqlog==0.3.20
 tabulate==0.8.9
-coloredlogs==15.0
+coloredlogs==15.0.1
 pika==1.2.0
 Click==8.0.1
 requests==2.27.0

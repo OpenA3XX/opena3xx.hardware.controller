@@ -9,4 +9,6 @@ sudo apt-get install python
 sudo apt install python3-pip
 
 Navigate to setup folder and run
+sudo chmod +x setup.sh
 ./setup.sh
+long pause here, be patient.

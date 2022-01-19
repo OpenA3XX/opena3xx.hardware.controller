@@ -5,7 +5,7 @@ grep -qxF 'gpio=18=op,dh' /boot/config.txt || echo 'gpio=18=op,dh' >> /boot/conf
 
 git clone https://github.com/OpenA3XX/opena3xx.hardware.controller.git /home/pi/opena3xx.hardware.controller
 cd /home/pi/opena3xx.hardware.controller
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 
 rm /lib/systemd/system/opena3xx.hardware.controller.service
 echo "

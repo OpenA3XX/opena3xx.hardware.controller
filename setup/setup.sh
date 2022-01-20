@@ -41,7 +41,10 @@ pip3 install -r requirements.txt
 
 # Remove any existing version of the start up service (if it exists)
 rm /lib/systemd/system/opena3xx-hardware-controller.service
-echo "If a 'Could not remove because it does not exist' message is above, this is ok."
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m
+echo "${GREEN}If a ${BLUE}'No such file or directory'${GREEN} message is above, this is ok.${NC}"
 
 # Set permissions to write the startup service to the system directory
 chmod a+rwx /lib/systemd/system

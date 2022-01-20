@@ -37,7 +37,7 @@ cd /home/pi/opena3xx.hardware.controller
 #trap "kill -9 $SPIN_PID" `seq 0 15`
 
 # Install the required libraries
-./progress.sh
+/bin/bash /home/pi/opena3xx.hardware.controller/setup/progress.sh
 pip3 install -r requirements.txt
 
 # Remove any existing version of the start up service (if it exists)

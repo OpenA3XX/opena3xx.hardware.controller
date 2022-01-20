@@ -6,7 +6,7 @@ phases=(
 )   
 
 for i in $(seq 1 100); do  
-    sleep 1.0
+    sleep 0.5
 
     if [ $i -eq 100 ]; then
         echo -e "XXX\n100\nReady for takeoff!\nXXX"

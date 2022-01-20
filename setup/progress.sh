@@ -4,7 +4,7 @@
         percentage="0"
         while (true)
         do
-            proc=$(ps aux | grep -v grep | grep -e "pip3")
+            proc=$(ps aux | grep -v grep | grep -e "/usr/bin/pip3")
             if [[ "$proc" == "" ]] && [[ "$percentage" -eq "0" ]];
             then
                 # Nothing to do as the process was not running when we

@@ -3,6 +3,8 @@ sudo sh -c "grep -qxF 'gpio=5=op,dh' /boot/config.txt || echo 'gpio=5=op,dh' >> 
 sudo sh -c "grep -qxF 'gpio=6=op,dh' /boot/config.txt || echo 'gpio=6=op,dh' >> /boot/config.txt"
 sudo sh -c "grep -qxF 'gpio=18=op,dh' /boot/config.txt || echo 'gpio=18=op,dh' >> /boot/config.txt"
 
+sudo chmod +x uninstall.sh
+
 # Commented out the 'git clone' because we have already downloaded very recently at this stage.
 # Updates can be added in again at a later date, near V1 release.
 #git clone https://github.com/OpenA3XX/opena3xx.hardware.controller.git /home/pi/opena3xx.hardware.controller
@@ -37,6 +39,7 @@ Description=OpenA3XX Digital Hardware Controller Board
 After=multi-user.target
 
 [Service]
+Type=idle
 WorkingDirectory=/home/pi/
 User=pi
 ExecStart=sh /home/pi/opena3xx.hardware.controller/start.sh
@@ -44,5 +47,9 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target" >> /lib/systemd/system/opena3xx-hardware-controller.service
+
+sudo chmod 644 /lib/systemd/system/opena3xx-hardware-controller.service
+sudo systemctl daemon-reload
+sudo systemctl enable opena3xx-hardware-controller.service
 
 echo "Finished."

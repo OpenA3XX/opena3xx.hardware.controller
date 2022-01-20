@@ -7,6 +7,25 @@ sudo sh -c "grep -qxF 'gpio=18=op,dh' /boot/config.txt || echo 'gpio=18=op,dh' >
 #git clone https://github.com/OpenA3XX/opena3xx.hardware.controller.git /home/pi/opena3xx.hardware.controller
 
 cd /home/pi/opena3xx.hardware.controller
+
+spin()
+{
+  spinner="/|\\-/|\\-"
+  while :
+  do
+    for i in `seq 0 7`
+    do
+      echo -n "${spinner:$i:1}"
+      echo -en "\010"
+      sleep 1
+    done
+  done
+}
+echo "Checking for updates, please wait...\n"
+spin &
+SPIN_PID=$!
+trap "kill -9 $SPIN_PID" `seq 0 15`
+
 pip3 install -r requirements.txt
 
 rm /lib/systemd/system/opena3xx-hardware-controller.service
@@ -24,3 +43,6 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target" >> /lib/systemd/system/opena3xx-hardware-controller.service
+
+echo "Finished."
+kill -9 $SPIN_PID

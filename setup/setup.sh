@@ -1,30 +1,5 @@
 #!/bin/bash
 
-echo "
-
-   ____                                 ____ __   ____   __
-  / __ \                         /\    |___ \\ \ / /\ \ / /
- | |  | | _ __    ___  _ __     /  \     __) |\ V /  \ V / 
- | |  | || '_ \  / _ \| '_ \   / /\ \   |__ <  > <    > <  
- | |__| || |_) ||  __/| | | | / ____ \  ___) |/ . \  / . \ 
-  \____/ | .__/  \___||_| |_|/_/    \_\|____//_/ \_\/_/ \_\
-  _    _ | |              _                                
- | |  | ||_|             | |                               
- | |__| |  __ _  _ __  __| |__      __ __ _  _ __  ___     
- |  __  | / _` || '__|/ _` |\ \ /\ / // _` || '__|/ _ \    
- | |  | || (_| || |  | (_| | \ V  V /| (_| || |  |  __/    
- |_|  |_| \__,_||_|   \__,_|  \_/\_/  \__,_||_|   \___|    
-   _____               _                _  _               
-  / ____|             | |              | || |              
- | |      ___   _ __  | |_  _ __  ___  | || |  ___  _ __   
- | |     / _ \ | '_ \ | __|| '__|/ _ \ | || | / _ \| '__|  
- | |____| (_) || | | || |_ | |  | (_) || || ||  __/| |     
-  \_____|\___/ |_| |_| \__||_|   \___/ |_||_| \___||_|     
-                                                           
-                                                           
-
-"
-
 # Add the required pin data to the startup config.
 sh -c "grep -qxF 'gpio=4=op,dh' /boot/config.txt || echo 'gpio=4=op,dh' >> /boot/config.txt"
 sh -c "grep -qxF 'gpio=5=op,dh' /boot/config.txt || echo 'gpio=5=op,dh' >> /boot/config.txt"
@@ -33,6 +8,7 @@ sh -c "grep -qxF 'gpio=18=op,dh' /boot/config.txt || echo 'gpio=18=op,dh' >> /bo
 
 # Add permissions to allow an uninstall later, should it be required.
 chmod +x uninstall.sh
+chmod +x progress.sh
 
 # Commented out the 'git clone' because we have already downloaded very recently at this stage.
 # Updates can be added in again at a later date, near V1 release.
@@ -61,7 +37,6 @@ cd /home/pi/opena3xx.hardware.controller
 #trap "kill -9 $SPIN_PID" `seq 0 15`
 
 # Install the required libraries
-chmod +x progress.sh
 ./progress.sh
 pip3 install -r requirements.txt
 

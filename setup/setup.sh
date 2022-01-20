@@ -77,3 +77,5 @@ systemctl enable opena3xx-hardware-controller.service
 
 # End the installer.
 echo "Finished!"
+
+kill -9 $SPIN_PID

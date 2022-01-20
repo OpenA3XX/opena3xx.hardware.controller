@@ -11,6 +11,8 @@ sudo apt-get upgrade
 sudo apt-get install python
 sudo apt install python3-pip
 
+git clone https://github.com/OpenA3XX/opena3xx.hardware.controller.git
+
 Navigate to setup folder and run
 sudo chmod +x setup.sh
 ./setup.sh

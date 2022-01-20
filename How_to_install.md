@@ -17,6 +17,8 @@ Navigate to setup folder and run
 sudo chmod +x setup.sh  
 ./setup.sh
 
+change ip address in configuration 
+
 sudo reboot
 
 Use 'htop' to check process and see that it is auto running.

@@ -16,3 +16,5 @@ git clone https://github.com/OpenA3XX/opena3xx.hardware.controller.git
 Navigate to setup folder and run
 sudo chmod +x setup.sh
 ./setup.sh
+
+sudo reboot

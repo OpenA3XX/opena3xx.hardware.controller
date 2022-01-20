@@ -21,7 +21,7 @@ spin()
     done
   done
 }
-echo "Checking for updates, please wait\n"
+echo "Checking for updates, please wait"
 spin &
 SPIN_PID=$!
 trap "kill -9 $SPIN_PID" `seq 0 15`
@@ -29,7 +29,7 @@ trap "kill -9 $SPIN_PID" `seq 0 15`
 pip3 install -r requirements.txt
 
 rm /lib/systemd/system/opena3xx-hardware-controller.service
-sudo chmod +rwx /lib/systemd/system
+sudo chmod a+rwx /lib/systemd/system
 sudo echo "
 [Unit]
 Description=OpenA3XX Digital Hardware Controller Board

@@ -8,7 +8,7 @@
 #sed -e 's/\("opena3xx-peripheral-api-ip"\:\)\("\)\(value1\)/\1New\2/g' filename
 #sed -e 's/\(key1\=\)\(Old\)\(value1\)/\1New\2/g' filename
 
-ipAddr=$(#ip -f inet addr show wlan0 | grep -Po 'inet \K[\d.]+)
+ipAddr=$(ip -f inet addr show wlan0 | grep -Po 'inet \K[\d.]+')
 
 sed -c -i "s/\("opena3xx-peripheral-api-ip" *: *\).*/\1$ipAddr/" /home/pi/opena3xx.hardware.controller/configuration/configuration.json
 

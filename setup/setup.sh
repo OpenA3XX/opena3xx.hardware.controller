@@ -47,9 +47,6 @@ NC='\033[0m'
 echo -e "${GREEN}If a ${BLUE}'No such file or directory'${GREEN} message is above, this is ok.${NC}"
 
 echo "Writing startup files"
-spin &
-SPIN_PID=$!
-trap "kill -9 $SPIN_PID" `seq 0 15`
 
 # Set permissions to write the startup service to the system directory
 chmod a+rwx /lib/systemd/system
@@ -77,5 +74,3 @@ systemctl enable opena3xx-hardware-controller.service
 
 # End the installer.
 echo "Finished!"
-
-kill -9 $SPIN_PID

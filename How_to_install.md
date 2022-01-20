@@ -1,3 +1,6 @@
+These are some temporary instructions. They may not make sense until I write them up properly.
+For now, they are just my reference notes.
+
 1) Create Raspbian light install on SD card
 2) Add 'ssh' and 'wpa_supplicant.conf' files to root folder of SD card.
     (Where wpa file has been updated with users own wireless settings)
@@ -11,4 +14,3 @@ sudo apt install python3-pip
 Navigate to setup folder and run
 sudo chmod +x setup.sh
 ./setup.sh
-long pause here, be patient.

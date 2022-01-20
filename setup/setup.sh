@@ -3,7 +3,8 @@ sudo sh -c "grep -qxF 'gpio=5=op,dh' /boot/config.txt || echo 'gpio=5=op,dh' >> 
 sudo sh -c "grep -qxF 'gpio=6=op,dh' /boot/config.txt || echo 'gpio=6=op,dh' >> /boot/config.txt"
 sudo sh -c "grep -qxF 'gpio=18=op,dh' /boot/config.txt || echo 'gpio=18=op,dh' >> /boot/config.txt"
 
-#Remove git clone?
+# Commented out the 'git clone' because we have already downloaded very recently at this stage.
+# Updates can be added in again at a later date, near V1 release.
 #git clone https://github.com/OpenA3XX/opena3xx.hardware.controller.git /home/pi/opena3xx.hardware.controller
 
 cd /home/pi/opena3xx.hardware.controller

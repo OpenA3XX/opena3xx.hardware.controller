@@ -62,6 +62,7 @@ progress()
       fi 
   done | whiptail --title 'OpenA3XX Hardware Controller' --gauge "${phases[0]}" 6 60 0
 }
+progress &
 PROGRESS_PID=$!
 trap "kill -9 $PROGRESS_PID" `seq 0 15`
 

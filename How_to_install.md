@@ -18,3 +18,7 @@ sudo chmod +x setup.sh
 ./setup.sh
 
 sudo reboot
+
+Use 'htop' to check process and see that it is auto running.
+It will currently check dependancies for udpates before launching the main.py.
+This can be changed to speed up start up at a later date.

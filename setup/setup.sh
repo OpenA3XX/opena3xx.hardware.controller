@@ -18,26 +18,53 @@ chmod +x progress.sh
 cd /home/pi/opena3xx.hardware.controller
 
 # Create and start the loading spinner
-spin()
-{
-  spinner="/|\\-/|\\-"
-  while :
-  do
-    for i in `seq 0 7`
-    do
-      echo -n "${spinner:$i:1}"
-      echo -en "\010"
-      sleep 1
-    done
-  done
-}
+#spin()
+#{
+#  spinner="/|\\-/|\\-"
+#  while :
+#  do
+#    for i in `seq 0 7`
+#    do
+#      echo -n "${spinner:$i:1}"
+#      echo -en "\010"
+#      sleep 1
+#    done
+#  done
+#}
 echo "Checking for updates, please wait"
-spin &
-SPIN_PID=$!
-trap "kill -9 $SPIN_PID" `seq 0 15`
+#spin &
+#SPIN_PID=$!
+#trap "kill -9 $SPIN_PID" `seq 0 15`
 
 # Install the required libraries
-/bin/bash /home/pi/opena3xx.hardware.controller/setup/progress.sh &
+#/bin/bash /home/pi/opena3xx.hardware.controller/setup/progress.sh &
+progress()
+{
+  phases=( 
+    'Checking in to Terminal'
+    'Weighing lugagge'
+    'Security & Passport control'
+    'Now boarding'
+  )   
+
+  while :
+  do
+  for i in $(seq 1 100); do  
+      sleep 0.5
+
+      if [ $i -eq 100 ]; then
+          echo -e "XXX\n100\nReady for takeoff!\nXXX"
+      elif [ $(($i % 25)) -eq 0 ]; then
+          let "phase = $i / 25"
+          echo -e "XXX\n$i\n${phases[phase]}\nXXX"
+      else
+          echo $i
+      fi 
+  done | whiptail --title 'OpenA3XX Hardware Controller' --gauge "${phases[0]}" 6 60 0
+}
+PROGRESS_PID=$!
+trap "kill -9 $PROGRESS_PID" `seq 0 15`
+
 pip3 install -r requirements.txt
 
 # Remove any existing version of the start up service (if it exists)

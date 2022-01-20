@@ -42,23 +42,23 @@ chmod +x uninstall.sh
 cd /home/pi/opena3xx.hardware.controller
 
 # Create and start the loading spinner
-spin()
-{
-  spinner="/|\\-/|\\-"
-  while :
-  do
-    for i in `seq 0 7`
-    do
-      echo -n "${spinner:$i:1}"
-      echo -en "\010"
-      sleep 1
-    done
-  done
-}
-echo "Checking for updates, please wait"
-spin &
-SPIN_PID=$!
-trap "kill -9 $SPIN_PID" `seq 0 15`
+#spin()
+#{
+#  spinner="/|\\-/|\\-"
+#  while :
+#  do
+#    for i in `seq 0 7`
+#    do
+#      echo -n "${spinner:$i:1}"
+#      echo -en "\010"
+#      sleep 1
+#    done
+#  done
+#}
+#echo "Checking for updates, please wait"
+#spin &
+#SPIN_PID=$!
+#trap "kill -9 $SPIN_PID" `seq 0 15`
 
 # Install the required libraries
 chmod +x progress.sh

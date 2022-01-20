@@ -1,9 +1,11 @@
-sudo sh -c "grep -qxF 'gpio=4=op,dh' /boot/config.txt || echo 'gpio=4=op,dh' >> /boot/config.txt"
-sudo sh -c "grep -qxF 'gpio=5=op,dh' /boot/config.txt || echo 'gpio=5=op,dh' >> /boot/config.txt"
-sudo sh -c "grep -qxF 'gpio=6=op,dh' /boot/config.txt || echo 'gpio=6=op,dh' >> /boot/config.txt"
-sudo sh -c "grep -qxF 'gpio=18=op,dh' /boot/config.txt || echo 'gpio=18=op,dh' >> /boot/config.txt"
+#!/bin/bash
 
-sudo chmod +x uninstall.sh
+sh -c "grep -qxF 'gpio=4=op,dh' /boot/config.txt || echo 'gpio=4=op,dh' >> /boot/config.txt"
+sh -c "grep -qxF 'gpio=5=op,dh' /boot/config.txt || echo 'gpio=5=op,dh' >> /boot/config.txt"
+sh -c "grep -qxF 'gpio=6=op,dh' /boot/config.txt || echo 'gpio=6=op,dh' >> /boot/config.txt"
+sh -c "grep -qxF 'gpio=18=op,dh' /boot/config.txt || echo 'gpio=18=op,dh' >> /boot/config.txt"
+
+chmod +x uninstall.sh
 
 # Commented out the 'git clone' because we have already downloaded very recently at this stage.
 # Updates can be added in again at a later date, near V1 release.
@@ -32,8 +34,8 @@ trap "kill -9 $SPIN_PID" `seq 0 15`
 pip3 install -r requirements.txt
 
 rm /lib/systemd/system/opena3xx-hardware-controller.service
-sudo chmod a+rwx /lib/systemd/system
-sudo echo "
+chmod a+rwx /lib/systemd/system
+echo "
 [Unit]
 Description=OpenA3XX Digital Hardware Controller Board
 After=multi-user.target
@@ -48,8 +50,8 @@ Restart=always
 [Install]
 WantedBy=multi-user.target" >> /lib/systemd/system/opena3xx-hardware-controller.service
 
-sudo chmod 644 /lib/systemd/system/opena3xx-hardware-controller.service
-sudo systemctl daemon-reload
-sudo systemctl enable opena3xx-hardware-controller.service
+chmod 644 /lib/systemd/system/opena3xx-hardware-controller.service
+systemctl daemon-reload
+systemctl enable opena3xx-hardware-controller.service
 
 echo "Finished."

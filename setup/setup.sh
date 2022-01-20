@@ -18,8 +18,8 @@ chmod +x progress.sh
 cd /home/pi/opena3xx.hardware.controller
 
 # Create and start the loading spinner
-#spin()
-#{
+# spin()
+# {
 #  spinner="/|\\-/|\\-"
 #  while :
 #  do
@@ -30,7 +30,7 @@ cd /home/pi/opena3xx.hardware.controller
 #      sleep 1
 #    done
 #  done
-#}
+# }
 echo "Checking for updates, please wait"
 #spin &
 #SPIN_PID=$!

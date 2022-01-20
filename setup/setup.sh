@@ -42,9 +42,14 @@ pip3 install -r requirements.txt
 # Remove any existing version of the start up service (if it exists)
 rm /lib/systemd/system/opena3xx-hardware-controller.service
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
+BLUE='\033[1;34m'
 NC='\033[0m'
 echo -e "${GREEN}If a ${BLUE}'No such file or directory'${GREEN} message is above, this is ok.${NC}"
+
+echo "Writing startup files"
+spin &
+SPIN_PID=$!
+trap "kill -9 $SPIN_PID" `seq 0 15`
 
 # Set permissions to write the startup service to the system directory
 chmod a+rwx /lib/systemd/system
@@ -71,4 +76,4 @@ systemctl daemon-reload
 systemctl enable opena3xx-hardware-controller.service
 
 # End the installer.
-echo "Finished."
+echo "Finished!"

@@ -38,9 +38,10 @@ The first thing we need to do is set up the Raspberry Pi ready for use. So, head
 
 Download and install this desktop application, then open it. It shouldn't take too long depending on your internet connection.  
 With the application open you should see a simple screen with 3 options. Insert your SD card to your PC, ignore any prompts about formatting.
-1) Choose <b>Raspbery Pi OS Lite</b>
-2) Choose your inserted SD card
-3) Click 'Write' and wait for the process to finish.
+1) Choose <b>Raspbery Pi OS (other)</b>
+2) Choose <b>Raspbery Pi OS Lite</b>
+3) Choose your inserted SD card
+4) Click 'Write' and wait for the process to finish.
 
 When the process is finished, remove the SD card from your computer and then reinsert it.
 Goto 'My Computer' and open the newly created 'Boot' drive.

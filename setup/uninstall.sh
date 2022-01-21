@@ -1,5 +1,7 @@
 cd /home/pi
 
+figlet "OpenA3XX Uninstaller" | /usr/games/lolcat -f
+
 failed=false
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -53,3 +55,5 @@ then
 else
     echo "${GREEN}OpenA3XX Hardware Controller uninstall successful${NC}"
 fi
+
+figlet "Uninstall complete!" | /usr/games/lolcat -f

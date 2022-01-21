@@ -1,21 +1,11 @@
 #!/bin/bash
 
 # Print logo to terminal
-
-
-echo "   ___                          _     _______  ____  __";
-echo "  / _ \  _ __    ___  _ __     / \   |___ /\ \/ /\ \/ /";
-echo " | | | || '_ \  / _ \| '_ \   / _ \    |_ \ \  /  \  / ";
-echo " | |_| || |_) ||  __/| | | | / ___ \  ___) |/  \  /  \ ";
-echo "  \___/ | .__/  \___||_| |_|/_/   \_\|____//_/\_\/_/\_\";
-echo "        |_|                                            ";
-echo "  ____   _         ___              _          _  _    ";
-echo " |  _ \ (_)       |_ _| _ __   ___ | |_  __ _ | || |   ";
-echo " | |_) || |        | | | '_ \ / __|| __|/ _\` || || |   ";
-echo " |  __/ | |        | | | | | |\__ \| |_| (_| || || |   ";
-echo " |_|    |_|       |___||_| |_||___/ \__|\__,_||_||_|   ";
-echo "                                                       ";
-
+sudo apt install figlet
+sudo apt install lolcat
+figlet "OpenA3XX" | lolcat
+figlet "Hardware" | lolcat
+figlet "Controller" | lolcat
 
 # Add the required pin data to the startup config.
 sh -c "grep -qxF 'gpio=4=op,dh' /boot/config.txt || echo 'gpio=4=op,dh' >> /boot/config.txt"

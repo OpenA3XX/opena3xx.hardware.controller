@@ -48,9 +48,13 @@ Download these two files:
 1) [wpa_supplicant.conf](https://github.com/OpenA3XX/opena3xx.hardware.controller/blob/main/wpa_supplicant.conf)
 2) [ssh](https://github.com/OpenA3XX/opena3xx.hardware.controller/blob/main/ssh)  
 
-Open up 'wpa_supplicant.conf' in any text editor (<b>NOT</b> Microsoft word! Use Notepad or similar) and replace 'Wi-Fi Name' with your wifi network name. Lastly replace 'Wi-Fi Password' with the password for that wifi netork. Save the file.
-Then, simply place these files into the 'Boot' directory.
-Remove the SD card, and the setup is complete!  
+Open up 'wpa_supplicant.conf' in any text editor (<b>NOT</b> Microsoft word! Use Notepad or similar) and replace 'Wi-Fi Name' with your wifi network name. Lastly replace 'Wi-Fi Password' with the password for that wifi netork. Save the file.  
+> It is worth noting that we recommend using `Notepad++` - but it is not essential to download this program if you ensure the file is correctly edited in another simple 'Notepad' application.  
+
+Then, simply place these files into the 'Boot' drive <i>see picture below</i>.  
+Remove the SD card, and the setup is complete!   
+
+<img src="https://github.com/OpenA3XX/opena3xx.documentation/blob/main/.gitbook/assets/Headless_Raspberry_Pi_screen_11.png">  
 
 <b>Congratulations!</b> Let's move on to Step 2 below.
 

@@ -3,9 +3,7 @@
 # Print logo to terminal
 sudo apt install figlet
 sudo apt install lolcat
-figlet "OpenA3XX" | lolcat
-figlet "Hardware" | lolcat
-figlet "Controller" | lolcat
+figlet "OpenA3XX Hardware Controller" | /usr/games/lolcat -f
 
 # Add the required pin data to the startup config.
 sh -c "grep -qxF 'gpio=4=op,dh' /boot/config.txt || echo 'gpio=4=op,dh' >> /boot/config.txt"

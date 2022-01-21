@@ -34,7 +34,7 @@ echo -e "${GREEN}I need to know which board number this is please.${NC}"
 echo -e "${GREEN}If this is the first board you're setting up, please enter ${BLUE}'1'${GREEN} below and hit ${BLUE}'Enter'. ${NC}"
 echo -e "${GREEN}Otherwise, enter the next free board number in your setup, and then hit ${BLUE}'Enter'. ${NC}"
 read boardIDNum
-echo -e "${GREEN}Thanks! I'll make this board number ${BLUE} $boardIDNum ${GREEN}!{$NC}"
+echo -e "${GREEN}Thanks! I'll make this board number ${BLUE} $boardIDNum ! {$NC}"
 echo "python3 /home/pi/opena3xx.hardware.controller/main.py --hardware-board-id=$boardIDNum" >> /home/pi/opena3xx.hardware.controller/start.sh
 
 # Create and start the loading spinner

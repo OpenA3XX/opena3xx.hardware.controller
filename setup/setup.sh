@@ -81,4 +81,4 @@ systemctl enable opena3xx-hardware-controller.service
 
 # End the installer.
 figlet "Install complete!" | /usr/games/lolcat -f
-echo "${GREEN}Please now continue with the remaining install directions from the 'How To Install' document if you're following the step-by-step guide.${NC}"
+echo -e "${GREEN}Please now continue with the remaining install directions from the 'How To Install' document if you're following the step-by-step guide.${NC}"

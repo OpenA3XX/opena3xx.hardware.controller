@@ -36,7 +36,7 @@ echo -e "${GREEN}I need to know which board number this is please.${NC}"
 echo -e "${GREEN}If this is the first board you're setting up, please enter ${BLUE}'1'${GREEN} below and hit ${BLUE}'Enter'${GREEN}. ${NC}"
 echo -e "${GREEN}Otherwise, enter the next free board number in your setup, and then hit ${BLUE}'Enter'${GREEN}. ${NC}"
 boardIDNum=""
-while [[ ! $boardIDNum =~ ^[0-9999]$ ]] 
+while [[ ! $boardIDNum =~ ^[0-9]{1,4}$ ]] 
 do
   echo -e "${GREEN}Please enter a number between ${RED}0${GREEN} and ${RED}9999 ${NC}"
   read boardIDNum

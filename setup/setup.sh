@@ -5,8 +5,28 @@ BLUE='\033[1;34m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# Print logo to terminal
+# Start the installer
 echo -e "${GREEN}Welcome to OpenA3XX! I'm just installing some required packages, please wait.${NC}"
+
+# Create and start the loading spinner
+spin()
+{
+  spinner="/|\\-/|\\-"
+  while :
+  do
+    for i in `seq 0 7`
+    do
+      echo -n "${spinner:$i:1}"
+      echo -en "\010"
+      sleep 1
+    done
+  done
+}
+spin &
+SPIN_PID=$!
+trap "kill -9 $SPIN_PID" `seq 0 15`
+
+# Print logo to terminal
 sudo apt install figlet &> /dev/null
 sudo apt install lolcat &> /dev/null
 echo -e "${GREEN}OK, let's start the install!${NC}"
@@ -42,26 +62,8 @@ done
 echo -e "${GREEN}Thanks! I'll make this board number ${BLUE} $boardIDNum ${GREEN} ! ${NC}"
 echo "python3 /home/pi/opena3xx.hardware.controller/main.py --hardware-board-id=$boardIDNum" >> /home/pi/opena3xx.hardware.controller/start.sh
 
-# Create and start the loading spinner
-spin()
-{
-  spinner="/|\\-/|\\-"
-  while :
-  do
-    for i in `seq 0 7`
-    do
-      echo -n "${spinner:$i:1}"
-      echo -en "\010"
-      sleep 1
-    done
-  done
-}
-echo -e "${GREEN}Checking for updates, ${RED}please wait!${GREEN} This may take some time, especially on first install.${NC}"
-spin &
-SPIN_PID=$!
-trap "kill -9 $SPIN_PID" `seq 0 15`
-
 # Install the required libraries
+echo -e "${GREEN}Checking for updates, ${RED}please wait!${GREEN} This may take some time, especially on first install.${NC}"
 pip3 install -r requirements.txt
 
 # Remove any existing version of the start up service (if it exists)

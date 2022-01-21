@@ -33,7 +33,12 @@ chmod +rwx start.sh
 echo -e "${GREEN}I need to know which board number this is please.${NC}"
 echo -e "${GREEN}If this is the first board you're setting up, please enter ${BLUE}'1'${GREEN} below and hit ${BLUE}'Enter'${GREEN}. ${NC}"
 echo -e "${GREEN}Otherwise, enter the next free board number in your setup, and then hit ${BLUE}'Enter'${GREEN}. ${NC}"
-read boardIDNum
+boardIDNum=""
+while [[ ! $boardIDNum =~ ^[0-9999]$ ]] 
+do
+  echo -e "${GREEN}Please enter a number between ${RED}0${GREEN} and ${RED}9999 ${NC}"
+  read boardIDNum
+done
 echo -e "${GREEN}Thanks! I'll make this board number ${BLUE} $boardIDNum ${GREEN} ! ${NC}"
 echo "python3 /home/pi/opena3xx.hardware.controller/main.py --hardware-board-id=$boardIDNum" >> /home/pi/opena3xx.hardware.controller/start.sh
 

@@ -20,7 +20,6 @@ sh -c "grep -qxF 'gpio=18=op,dh' /boot/config.txt || echo 'gpio=18=op,dh' >> /bo
 
 # Add permissions to allow an uninstall later, should it be required.
 chmod +x uninstall.sh
-chmod +x progress.sh
 
 # Commented out the 'git clone' because we have already downloaded very recently at this stage.
 # Updates can be added in again at a later date, near V1 release.

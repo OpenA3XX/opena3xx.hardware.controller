@@ -123,6 +123,10 @@ sudo ./setup.sh
 After running the last command you will notice the installer starts.  
 <b>You need to be patient with this, especially if your internet connection is slow.</b>  
 
+Near the beginning of the install process, it will ask you to enter a 'Board ID Number'.  
+As this will be our first board, we simply type `1` and then hit `enter`.  
+Obviously, if we are adding additional boards, we enter the relevant number.
+
 When you see the `Install Complete!` message. Type the following command:  
 `sudo reboot now`  
 You will then see an error message saying the connection was lost, and this is to be expected as we have just restarted the Raspberry Pi.  

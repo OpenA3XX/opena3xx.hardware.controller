@@ -147,6 +147,20 @@ If this document needs changing or clarifying in certain areas, please let us kn
 
 We hope you enjoy the product, and happy landings!
 
+---
+
+## Uninstall
+
+Should you ever need to uninstall the hardware controller, it is very simple.  
+Just run this code:  
+```
+cd /home/pi/opena3xx.hardware.controller/setup
+
+sudo ./uninstall.sh
+```
+
+And that's it! You will see a message when the uninstall is complete!  
+
 [//]: # (Use 'htop' to check process and see that it is auto running.)
 [//]: # (It will currently check dependancies for udpates before launching the main.py.)
 [//]: # (This can be changed to speed up start up at a later date.)

@@ -51,8 +51,8 @@ trap "kill -9 $SPIN_PID" `seq 0 15`
 pip3 install -r requirements.txt
 
 # Remove any existing version of the start up service (if it exists)
-rm /lib/systemd/system/opena3xx-hardware-controller.service
-echo -e "${GREEN}If a ${BLUE}'No such file or directory'${GREEN} message is above, this is ok.${NC}"
+rm /lib/systemd/system/opena3xx-hardware-controller.service 2> /dev/null
+#echo -e "${GREEN}If a ${BLUE}'No such file or directory'${GREEN} message is above, this is ok.${NC}"
 echo "-"
 
 # Write files to the startup to ensure the application runs automatically

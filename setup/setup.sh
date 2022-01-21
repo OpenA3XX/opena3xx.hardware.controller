@@ -1,5 +1,9 @@
 #!/bin/bash
 
+GREEN='\033[0;32m'
+BLUE='\033[1;34m'
+NC='\033[0m'
+
 # Print logo to terminal
 sudo apt install figlet
 sudo apt install lolcat

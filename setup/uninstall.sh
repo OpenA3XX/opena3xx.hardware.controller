@@ -9,7 +9,7 @@ sudo systemctl stop opena3xx-hardware-controller.service
 if [ $? -eq 0 ]; then
    echo "${GREEN}Automatic start-up service stopped${NC}"
 else
-   echo "Failed to stop /lib/systemd/system/opena3xx-hardware-controller.service"
+   #echo "Failed to stop /lib/systemd/system/opena3xx-hardware-controller.service"
    failed=true
 fi
 
@@ -17,7 +17,7 @@ sudo systemctl disable opena3xx-hardware-controller.service
 if [ $? -eq 0 ]; then
    echo "${GREEN}Automatic start-up service disabled${NC}"
 else
-   echo "Failed to disable /lib/systemd/system/opena3xx-hardware-controller.service"
+   #echo "Failed to disable /lib/systemd/system/opena3xx-hardware-controller.service"
    failed=true
 fi
 
@@ -25,7 +25,7 @@ sudo rm -rf opena3xx.hardware.controller
 if [ $? -eq 0 ]; then
    echo "${GREEN}opena3xx.hardware.controller directory removed${NC}"
 else
-   echo "Failed to stop /lib/systemd/system/opena3xx-hardware-controller.service"
+   #echo "Failed to remove opena3xx.hardware.controller directory"
    failed=true
 fi
 
@@ -33,7 +33,7 @@ sudo rm /lib/systemd/system/opena3xx-hardware-controller.service
 if [ $? -eq 0 ]; then
    echo ""
 else
-   echo "Failed to stop /lib/systemd/system/opena3xx-hardware-controller.service"
+   #echo "Failed to remove /lib/systemd/system/opena3xx-hardware-controller.service"
    failed=true
 fi
 
@@ -45,9 +45,10 @@ else
    failed=true
 fi
 
-if [ $failed -eq true ]
+if [ $failed = true ]
 then
     echo "There was an ${RED}error${NC} with the uninstall process. Please check the error message above."
+    echo "Uninstall may still have been successful. If in doubt, reflash SD card with new install/image."
     echo "If unable to manually resolve the problem, please contact a member of the OpenA3XX team."
 else
     echo "${GREEN}OpenA3XX Hardware Controller uninstall successful${NC}"

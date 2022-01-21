@@ -1,5 +1,28 @@
 #!/bin/bash
 
+GREEN='\033[0;32m'
+BLUE='\033[1;34m'
+NC='\033[0m'
+
+# Print logo to terminal
+${BLUE}
+echo "   ___   ____   _____  _   _     _     _______  ____  __              ";
+echo "  / _ \ |  _ \ | ____|| \ | |   / \   |___ /\ \/ /\ \/ /              ";
+echo " | | | || |_) ||  _|  |  \| |  / _ \    |_ \ \  /  \  /               ";
+echo " | |_| ||  __/ | |___ | |\  | / ___ \  ___) |/  \  /  \               ";
+echo "  \___/ |_|    |_____||_| \_|/_/   \_\|____//_/\_\/_/\_\              "; ${NC}
+echo "  _   _     _     ____   ____ __        __ _     ____   _____         ";
+echo " | | | |   / \   |  _ \ |  _ \\ \      / // \   |  _ \ | ____|        ";
+echo " | |_| |  / _ \  | |_) || | | |\ \ /\ / // _ \  | |_) ||  _|          ";
+echo " |  _  | / ___ \ |  _ < | |_| | \ V  V // ___ \ |  _ < | |___         ";
+echo " |_| |_|/_/   \_\|_| \_\|____/   \_/\_//_/   \_\|_| \_\|_____|        "; ${BLUE}
+echo "   ____  ___   _   _  _____  ____    ___   _      _      _____  ____  ";
+echo "  / ___|/ _ \ | \ | ||_   _||  _ \  / _ \ | |    | |    | ____||  _ \ ";
+echo " | |   | | | ||  \| |  | |  | |_) || | | || |    | |    |  _|  | |_) |";
+echo " | |___| |_| || |\  |  | |  |  _ < | |_| || |___ | |___ | |___ |  _ < ";
+echo "  \____|\___/ |_| \_|  |_|  |_| \_\ \___/ |_____||_____||_____||_| \_\";
+echo "                                                                      "; ${NC}
+
 # Add the required pin data to the startup config.
 sh -c "grep -qxF 'gpio=4=op,dh' /boot/config.txt || echo 'gpio=4=op,dh' >> /boot/config.txt"
 sh -c "grep -qxF 'gpio=5=op,dh' /boot/config.txt || echo 'gpio=5=op,dh' >> /boot/config.txt"
@@ -41,11 +64,9 @@ pip3 install -r requirements.txt
 
 # Remove any existing version of the start up service (if it exists)
 rm /lib/systemd/system/opena3xx-hardware-controller.service
-GREEN='\033[0;32m'
-BLUE='\033[1;34m'
-NC='\033[0m'
 echo -e "${GREEN}If a ${BLUE}'No such file or directory'${GREEN} message is above, this is ok.${NC}"
 
+# Write files to the startup to ensure the application runs automatically
 echo "Writing startup files"
 
 # Set permissions to write the startup service to the system directory

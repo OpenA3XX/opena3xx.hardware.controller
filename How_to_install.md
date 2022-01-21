@@ -45,10 +45,10 @@ With the application open you should see a simple screen with 3 options. Insert 
 When the process is finished, remove the SD card from your computer and then reinsert it.
 Goto 'My Computer' and open the newly created 'Boot' drive.
 Download these two files:
-1) [wpa_supplicant.conf](https://github.com/OpenA3XX/opena3xx.hardware.controller/blob/main/wpa_supplicant.conf)
-2) [ssh](https://github.com/OpenA3XX/opena3xx.hardware.controller/blob/main/ssh)  
+1) [wpa_supplicant.conf](https://github.com/OpenA3XX/opena3xx.hardware.controller/raw/main/wpa_supplicant.conf)
+2) [ssh](https://github.com/OpenA3XX/opena3xx.hardware.controller/raw/main/ssh)  
 
-Open up 'wpa_supplicant.conf' in any text editor (<b>NOT</b> Microsoft word! Use Notepad or similar) and replace 'Wi-Fi Name' with your wifi network name. Lastly replace 'Wi-Fi Password' with the password for that wifi netork. Save the file.  
+Open up 'wpa_supplicant.conf' in any text editor (<b>NOT</b> Microsoft word! Use Notepad or similar) and replace 'country code' with your country (GB, US, DE, etc), 'Wi-Fi Name' with your wifi network name. Lastly replace 'Wi-Fi Password' with the password for that wifi netork. Save the file.  
 > It is worth noting that we recommend using `Notepad++` - but it is not essential to download this program if you ensure the file is correctly edited in another simple 'Notepad' application.  
 
 Then, simply place these files into the 'Boot' drive <i>see picture below</i>.  
@@ -76,6 +76,8 @@ Ok, now we have that installed just open up the application and you'll see a scr
 <b>We are only going to type ONE thing here, so ignore everything except this one text box!</b> 
 <img src="https://github.com/OpenA3XX/opena3xx.documentation/blob/main/.gitbook/assets/PuTTY_Connect.png" width=400>  
 Here we need to type in the IP address of the raspberry pi. There are several ways of finding out what the IP address of the Raspbery Pi is, but the most straight forward way is to login into your home router and look at the devices connected to your network. Each router has a different method for this, so Google how to do this for your specific router.  
+> While you are here in your router, you should consider giving your Raspbery Pi a <b>Static IP Address</b>. You can do this within your router admin page, so might as well while you're there. Again, ask Google for specific instructions on how to do this for your router.  
+
 It is also possible to download some apps on your phone that will scan your network and show you connected devices and their IP address.   
 Once you have chosen your method, find the connection called <b>'raspberrypi'</b> and find the corresponding IP address.  
 `It will be something similar to: <b>'192.168.0.30'</b>`  

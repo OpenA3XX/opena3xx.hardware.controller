@@ -5,8 +5,10 @@ BLUE='\033[1;34m'
 NC='\033[0m'
 
 # Print logo to terminal
+echo -e "${GREEN}Welcome to OpenA3XX! I'm just installing some required packages.${NC}"
 sudo apt install figlet
 sudo apt install lolcat
+echo -e "${GREEN}OK, let's start the install!${NC}"
 figlet "OpenA3XX Hardware Controller" | /usr/games/lolcat -f
 
 # Add the required pin data to the startup config.
@@ -40,7 +42,7 @@ spin()
     done
   done
 }
-echo "Checking for updates, please wait. This may take some time, especially on first install."
+echo -e "${GREEN}Checking for updates, ${RED}please wait!${GREEN} This may take some time, especially on first install.${NC}"
 spin &
 SPIN_PID=$!
 trap "kill -9 $SPIN_PID" `seq 0 15`

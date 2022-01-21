@@ -7,10 +7,10 @@
 <img src="https://github.com/OpenA3XX/opena3xx.site/blob/main/assets/images/OPENA3XX%20logo%20RGB.png?raw=true" alt="Logo" width="300"/>
 </a>
 
-# OpenA3xx Hardware Controller Board (inc MCDU)
+# OpenA3XX Hardware Controller Board (inc MCDU)
 
 Welcome to the 'Hardware Controller' for the OpenA3XX project.  
-If you're setting up our <B>MCDU</b>, or our <b>standard controller</b> baord then you're in the right place!
+If you're setting up our <B>MCDU</b>, or our <b>standard controller</b> board then you're in the right place!
 
 ## Let's get started!
 
@@ -33,7 +33,7 @@ You will need:
 We are assuming you have a brand new board, and an empty SD card.  
 > <i>If you already have some experience with Raspbery Pi boards, then setup <b>Raspberry Pi OS Lite</b> and move on to step 2 below.</i>
 
-The first thing we need to do is set up the Raspberry Pi ready for use. So, head over to this [Raspberry Pi](https://www.raspberrypi.com/software/) website and scroll down until you see <b>'Download for xxx'</b> <i>where 'xxx' would be replaced with your opoerating system</i>.
+The first thing we need to do is set up the Raspberry Pi ready for use. So, head over to this [Raspberry Pi](https://www.raspberrypi.com/software/) website and scroll down until you see <b>'Download for xxx'</b> <i>where 'xxx' would be replaced with your operating system</i>.
 <img src="https://github.com/OpenA3XX/opena3xx.documentation/blob/main/.gitbook/assets/RaspPiToolDownload.jpg">
 
 Download and install this desktop application, then open it. It shouldn't take too long depending on your internet connection.  
@@ -56,7 +56,7 @@ Remove the SD card, and the setup is complete!
 
 ## Step 2
 
-Now that we have the Raspbery Pi setup, we need to conenct to it and talk to it.
+Now that we have the Raspbery Pi setup, we need to connect to it and talk to it.
 For this, we are going to use what's called a <b>'Headless'</b> connection. It is probably much easier, quicker and simple to do it this way, rather than having to try and connect a keyboard, mouse and screen directly to the Pi at this point.  
 
 > If you have never worked with command line before, <b>please</b> do not put off by this. We promise it is easy, and if you follow this guide, you really won't have to do much > at all. We really want this to be accessible to everyone, and although the command line can be a bit daunting and offputing for some people, `we promise that you can do this!`  
@@ -72,7 +72,7 @@ Ok, now we have that installed just open up the application and you'll see a scr
 <b>We are only going to type ONE thing here, so ignore everything except this one text box!</b> 
 <img src="https://github.com/OpenA3XX/opena3xx.documentation/blob/main/.gitbook/assets/PuTTY_Connect.png" width=400>  
 Here we need to type in the IP address of the raspberry pi. There are several ways of finding out what the IP address of the Raspbery Pi is, but the most straight forward way is to login into your home router and look at the devices connected to your network. Each router has a different method for this, so Google how to do this for your specific router.  
-It is also possible to download some apps on your phone that will scan your network and show you conencted devices and their IP address.   
+It is also possible to download some apps on your phone that will scan your network and show you connected devices and their IP address.   
 Once you have chosen your method, find the connection called <b>'raspberrypi'</b> and find the corresponding IP address.  
 `It will be something similar to: <b>'192.168.0.30'</b>`  
 
@@ -101,7 +101,7 @@ Now, all you have to do is type some commands everything will done automatically
 Let's go!  
 
 Type the following commands one-by-one and then hit enter. Wait for each one to finish before starting the next.  
-You'll know when you can type the next one, because you will the green text that says `pi@raspberrypi ~ $`.  
+You'll know when you can type the next one, because you will see the green text that says `pi@raspberrypi ~ $`.  
 ```
 sudo apt update && sudo apt upgrade
 
@@ -134,7 +134,7 @@ This is ok, as we have now finished with the command line anyway.
 
 Everytime you start up the Raspberry Pi, it will automatically run the program (and check for updates) so you won't need to connect to it via command line again. Phew!  
 
-Because it will check for updates when it starts, we recommend powering it up a couple of minuets before starting the software.  
+Because it will check for updates when it starts, we recommend powering it up a couple of minutes before starting the software.  
 
 ### That's it! Congratulations!
 

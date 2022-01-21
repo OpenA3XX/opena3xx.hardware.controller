@@ -40,7 +40,7 @@ spin()
     done
   done
 }
-echo "Checking for updates, please wait"
+echo "Checking for updates, please wait. This may take some time, especially on first install."
 spin &
 SPIN_PID=$!
 trap "kill -9 $SPIN_PID" `seq 0 15`
@@ -51,9 +51,10 @@ pip3 install -r requirements.txt
 # Remove any existing version of the start up service (if it exists)
 rm /lib/systemd/system/opena3xx-hardware-controller.service
 echo -e "${GREEN}If a ${BLUE}'No such file or directory'${GREEN} message is above, this is ok.${NC}"
+echo "-"
 
 # Write files to the startup to ensure the application runs automatically
-echo "Writing startup files"
+echo -e "${GREEN}Writing startup files${NC}"
 
 # Set permissions to write the startup service to the system directory
 chmod a+rwx /lib/systemd/system
@@ -81,4 +82,4 @@ systemctl enable opena3xx-hardware-controller.service
 
 # End the installer.
 figlet "Install complete!" | /usr/games/lolcat -f
-echo -e "${GREEN}Please now continue with the remaining install directions from the 'How To Install' document if you're following the step-by-step guide.${NC}"
+echo -e "${GREEN}Please now continue with the remaining install directions from the ${BLUE}'How To Install'${GREEN} document if you're following the step-by-step guide.${NC}"

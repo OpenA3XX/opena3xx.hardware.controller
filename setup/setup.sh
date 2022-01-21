@@ -7,8 +7,8 @@ NC='\033[0m'
 
 # Print logo to terminal
 echo -e "${GREEN}Welcome to OpenA3XX! I'm just installing some required packages, please wait.${NC}"
-sudo apt install figlet 2> /dev/null
-sudo apt install lolcat 2> dev/null
+sudo apt install figlet &> /dev/null
+sudo apt install lolcat &> /dev/null
 echo -e "${GREEN}OK, let's start the install!${NC}"
 figlet "OpenA3XX Hardware Controller" | /usr/games/lolcat -f
 

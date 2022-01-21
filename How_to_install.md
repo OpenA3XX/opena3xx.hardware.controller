@@ -111,7 +111,7 @@ You'll know when you can type the next one, because you will see the green text 
 ```
 sudo apt update && sudo apt upgrade
 
-sudo apt-install git
+sudo apt install git
 
 sudo apt-get install python
 

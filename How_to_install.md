@@ -129,6 +129,7 @@ sudo ./setup.sh
 After running the last command you will notice the installer starts.  
 <b>You need to be patient with this, especially if your internet connection is slow.</b>  
 
+The first thing you will see is a prompt asking you `Do you want to continue? [Y/n]` - Type `Y` and then hit 'enter' to continue.   
 Near the beginning of the install process, it will ask you to enter a 'Board ID Number'.  
 As this will be our first board, we simply type `1` and then hit `enter`.  
 Obviously, if we are adding additional boards, we enter the relevant number.

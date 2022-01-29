@@ -10,7 +10,8 @@ echo -e "${GREEN}Welcome to OpenA3XX! I'm just installing some required packages
 
 # Print logo to terminal
 sudo apt install figlet &> /dev/null
-sudo apt install lolcat &> /dev/null
+# sudo apt install lolcat &> /dev/null
+sudo apt install lolcat
 echo -e "${GREEN}OK, let's start the install!${NC}"
 figlet "OpenA3XX Hardware Controller" | /usr/games/lolcat -f
 

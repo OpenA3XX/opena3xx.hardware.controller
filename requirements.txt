@@ -3,7 +3,7 @@ seqlog==0.3.20
 tabulate==0.8.9
 coloredlogs==15.0
 pika==1.2.0
-Click==8.0.1
+Click==8.1.2
 requests==2.25.1
 netaddr==0.8.0
 netifaces==0.11.0

@@ -4,7 +4,7 @@ tabulate==0.8.9
 coloredlogs==15.0
 pika==1.2.0
 Click==8.0.1
-requests==2.25.1
+requests==2.28.1
 netaddr==0.8.0
 netifaces==0.11.0
 RPi.GPIO==0.7.0

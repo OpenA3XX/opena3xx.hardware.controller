@@ -13,7 +13,9 @@ from opena3xx.hardware.opena3xx_lights import OpenA3XXHardwareLightsService
 from opena3xx.hardware.opena3xx_mcp23017 import OpenA3XXHardwareService
 from opena3xx.logging import log_init
 from opena3xx.models import FAULT_LED, MESSAGING_LED, GENERAL_LED
-from opena3xx.networking import OpenA3XXNetworkingClient, OpenA3xxHttpClient, INPUT_SWITCH, EXTENDER_CHIPS_RESET
+from opena3xx.networking import OpenA3XXNetworkingClient
+from opena3xx.http import OpenA3xxHttpClient
+from opena3xx.models import INPUT_SWITCH, EXTENDER_CHIPS_RESET
 
 log_init()
 logger = logging.getLogger("main")
@@ -35,13 +37,13 @@ def main(hardware_board_id: int):
     try:
         logger.info("OpenA3XX Hardware Controller: Application Started")
         networking_client = OpenA3XXNetworkingClient()
-        networking_client.start_api_discovery()
+        scheme, api_host, api_port = networking_client.start_api_discovery()
 
-        http_client = OpenA3xxHttpClient()
+        http_client = OpenA3xxHttpClient(scheme, api_host, api_port)
         board_details = http_client.get_hardware_board_details(hardware_board_id)
 
         if board_details is not None:
-            rabbitmq_client = OpenA3XXMessagingService()
+            rabbitmq_client = OpenA3XXMessagingService(http_client)
             rabbitmq_client.init_and_start()
             hardware_service = OpenA3XXHardwareService(rabbitmq_client, hardware_board_id)
             hardware_service.init_and_start(board_details)

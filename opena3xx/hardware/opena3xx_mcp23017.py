@@ -3,7 +3,7 @@ import logging
 import board
 import time
 import busio
-import RPi.GPIO as GPIO
+from opena3xx.hardware.gpio_shim import GPIO
 from adafruit_mcp230xx.mcp23017 import MCP23017
 from digitalio import Direction, Pull
 from tabulate import tabulate

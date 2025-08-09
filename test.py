@@ -3,7 +3,7 @@ from time import sleep
 import board
 import busio
 from digitalio import Direction, Pull
-import RPi.GPIO as GPIO
+from opena3xx.hardware.gpio_shim import GPIO
 from adafruit_mcp230xx.mcp23017 import MCP23017
 from datetime import datetime
 

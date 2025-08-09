@@ -3,7 +3,7 @@ import json
 import logging
 
 import pika
-import RPi.GPIO as GPIO
+from opena3xx.hardware.gpio_shim import GPIO
 from pika.adapters.blocking_connection import BlockingChannel
 
 from opena3xx.exceptions import OpenA3XXRabbitMqPublishingException

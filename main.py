@@ -2,7 +2,7 @@ import os
 import logging
 import time
 import click
-import RPi.GPIO as GPIO
+from opena3xx.hardware.gpio_shim import GPIO
 from art import *
 from tabulate import tabulate
 

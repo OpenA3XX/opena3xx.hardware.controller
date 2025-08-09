@@ -28,6 +28,12 @@ class OpenA3XXHardwareService:
         self.hardware_board_id = hardware_board_id
 
     def bus_interrupt(self, port):
+        """GPIO interrupt callback for extender bus IRQ lines.
+
+        Identifies the associated extender bus, reads MCP23017 interrupt flags
+        to locate the triggered bit(s), and publishes an event if the bit is
+        mapped to a hardware input selector. LEDs provide brief visual feedback.
+        """
         GPIO.output(GENERAL_LED, GPIO.HIGH)
         self.logger.debug(f"Interrupt received on port {port}")
         _bus = None
@@ -76,6 +82,7 @@ class OpenA3XXHardwareService:
         GPIO.output(GENERAL_LED, GPIO.LOW)
 
     def init_and_start(self, board_details: HardwareBoardDetailsDto):
+        """Initialize GPIO, I2C, extenders, and register interrupt handlers."""
         self.logger.info("Initializing hardware service (GPIO/MCP23017)")
         try:
             GPIO.setmode(GPIO.BCM)
@@ -89,18 +96,24 @@ class OpenA3XXHardwareService:
         self.logger.debug("Initializing I2C bus on board.SCL/board.SDA")
         i2c = busio.I2C(board.SCL, board.SDA)
 
+        # Initialize GPIO pins for LEDs and switches
         GPIO.setup(MESSAGING_LED, GPIO.OUT)
         GPIO.setup(FAULT_LED, GPIO.OUT)
         GPIO.setup(GENERAL_LED, GPIO.OUT)
         GPIO.setup(EXTENDER_CHIPS_RESET, GPIO.OUT)
         GPIO.setup(INPUT_SWITCH, GPIO.IN)
+
+        # Initialize INPUT_SWITCH
         try:
             input_switch_value = GPIO.input(INPUT_SWITCH)
             self.logger.info(f"INPUT_SWITCH initial state: {'LOW' if input_switch_value == GPIO.LOW else 'HIGH'}")
         except Exception:
             self.logger.warning("Unable to read INPUT_SWITCH initial state")
+
+        # Initialize the LED pattern
         OpenA3XXHardwareLightsService.init_pattern()
 
+        # Reset the MCP23017 ICs
         self.logger.info("Resetting MCP23017 ICs Reset Pin: Started")
         GPIO.output(EXTENDER_CHIPS_RESET, GPIO.LOW)
         time.sleep(1)
@@ -148,8 +161,14 @@ class OpenA3XXHardwareService:
 
             bit_counter = 0
             for extender_bit in extender.io_extender_bus_bits:
+
+                # Parse the bit from the name
                 bus_bit = parse_bit_from_name(extender_bit.name)
+
+                # Get the pin from the MCP23017
                 pin = bus.get_pin(bus_bit)
+
+                # Create a dictionary of the extender bit data
                 extender_bit_data_dict = dict(extender_bus_id=extender.id, extender_bus_name=extender.name, bus=bus,
                                               extender_bit_id=extender_bit.id, extender_bit_name=extender_bit.name,
                                               bus_bit=bus_bit,
@@ -166,12 +185,14 @@ class OpenA3XXHardwareService:
                 if extender_bit_data_dict["is_input"] is False and extender_bit_data_dict["is_output"] is False:
                     extender_bit_data_dict["is_output"] = True
 
+                # Configure the pin as input if it is an input selector
                 if extender_bit_data_dict["is_input"]:
                     pin.direction = Direction.INPUT
                     pin.pull = Pull.UP
                     self.logger.debug(
                         f"Configured extender bit '{extender_bit.name}' as INPUT (bus_bit={bus_bit}) with PULL.UP")
 
+                # Configure the pin as output if it is an output selector
                 if extender_bit_data_dict["is_output"]:
                     pin.direction = Direction.OUTPUT
                     self.logger.debug(
@@ -181,7 +202,47 @@ class OpenA3XXHardwareService:
                 bit_counter += 1
             extender_address_start += 1
 
-        self.logger.info(
-            f"Extender Bus Details ↓\n{tabulate(self.extender_bus_details, headers='keys', tablefmt='pretty')}")
-        self.logger.info(
-            f"Extender Bus Bit Details ↓\n{tabulate(self.extender_bus_bit_details, headers='keys', tablefmt='pretty')}")
+        # Log a concise view by selecting specific columns from details
+        bus_columns = ["extender_bus_id", "extender_bus_name", "interrupt_pin"]
+        bit_columns = [
+            "extender_bus_id",
+            "extender_bit_id",
+            "extender_bus_name",
+            "extender_bit_name",
+            "bus_bit",
+            "is_input",
+            "input_selector_name",
+            "is_output",
+            "output_selector_name",
+        ]
+
+        def _select_columns(rows: list, cols: list[str]) -> list[list]:
+            # Return rows as lists aligned to the headers order
+            selected_rows: list[list] = []
+            for row in rows:
+                selected_rows.append([row.get(c) for c in cols])
+            return selected_rows
+
+        # Sort by extender bus name for buses
+        sorted_buses = sorted(
+            self.extender_bus_details,
+            key=lambda r: (
+                str(r.get("extender_bus_name", "")),
+                int(r.get("interrupt_pin", 0)),
+            ),
+        )
+
+        # Sort by extender bus name and numeric bus_bit for bits
+        sorted_bits = sorted(
+            self.extender_bus_bit_details,
+            key=lambda r: (
+                str(r.get("extender_bus_name", "")),
+                int(r.get("bus_bit", 0)),
+            ),
+        )
+
+        bus_table = tabulate(_select_columns(sorted_buses, bus_columns), headers=bus_columns, tablefmt='grid')
+        bit_table = tabulate(_select_columns(sorted_bits, bit_columns), headers=bit_columns, tablefmt='grid')
+
+        self.logger.info(f"Extender Bus Details ↓\n{bus_table}")
+        self.logger.info(f"Extender Bus Bit Details ↓\n{bit_table}")

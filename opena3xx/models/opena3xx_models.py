@@ -1,51 +1,77 @@
+from typing import List, Dict, Any
+from dataclasses import dataclass, field
+
+
+@dataclass
 class IOExtenderBitDto:
-    def __init__(self, id: int, name: str, hardwareInputSelectorFullName: str, hardwareOutputSelectorFullName: str,
-                 hardware_input_selector_id: int, hardware_output_selector_id: int):
-        self.id = id
-        self.name = name
-        self.hardware_input_selector_id = hardware_input_selector_id
-        self.hardware_input_selector_fullname = hardwareInputSelectorFullName
-        self.hardware_output_selector_id = hardware_output_selector_id
-        self.hardware_output_selector_fullname = hardwareOutputSelectorFullName
+    id: int
+    name: str
+    hardware_input_selector_fullname: str
+    hardware_output_selector_fullname: str
+    hardware_input_selector_id: int
+    hardware_output_selector_id: int
+
+    @classmethod
+    def from_api(cls, data: Dict[str, Any]) -> "IOExtenderBitDto":
+        return cls(
+            id=int(data["id"]),
+            name=data["name"],
+            hardware_input_selector_fullname=data["hardwareInputSelectorFullName"],
+            hardware_output_selector_fullname=data["hardwareOutputSelectorFullName"],
+            hardware_input_selector_id=data["hardwareInputSelectorId"],
+            hardware_output_selector_id=data["hardwareOutputSelectorId"],
+        )
 
 
+@dataclass
 class IOExtenderBusDto:
-    def __init__(self, id: int, name: str, ioExtenderBusBits: []):
-        self.id = id
-        self.name = name
-        self.io_extender_bus_bits = []
-        for extender_bus_bit in ioExtenderBusBits:
-            self.io_extender_bus_bits.append(IOExtenderBitDto(int(extender_bus_bit["id"]),
-                                                              extender_bus_bit["name"],
-                                                              extender_bus_bit["hardwareInputSelectorFullName"],
-                                                              extender_bus_bit["hardwareOutputSelectorFullName"],
-                                                              extender_bus_bit["hardwareInputSelectorId"],
-                                                              extender_bus_bit["hardwareOutputSelectorId"]))
+    id: int
+    name: str
+    io_extender_bus_bits: List[IOExtenderBitDto] = field(default_factory=list)
+
+    @classmethod
+    def from_api(cls, data: Dict[str, Any]) -> "IOExtenderBusDto":
+        bits = [IOExtenderBitDto.from_api(b) for b in data["ioExtenderBusBits"]]
+        return cls(id=int(data["id"]), name=data["name"], io_extender_bus_bits=bits)
 
 
+@dataclass
 class HardwareBoardDetailsDto:
-    def __init__(self, id: int, name: str, ioExtenderBuses: []):
-        self.id = id
-        self.name = name
-        self.io_extender_buses = []
+    id: int
+    name: str
+    io_extender_buses: List[IOExtenderBusDto] = field(default_factory=list)
 
-        for extender_bus in ioExtenderBuses:
-            self.io_extender_buses.append(IOExtenderBusDto(int(extender_bus["id"]),
-                                                           extender_bus["name"],
-                                                           extender_bus["ioExtenderBusBits"]))
+    @classmethod
+    def from_api(cls, data: Dict[str, Any]) -> "HardwareBoardDetailsDto":
+        buses = [IOExtenderBusDto.from_api(b) for b in data["ioExtenderBuses"]]
+        return cls(id=int(data["id"]), name=data["name"], io_extender_buses=buses)
 
 
+@dataclass
 class OpenA3XXConfigurationDto:
-    def __init__(self, configuration_dict: []):
-        self.opena3xx_network_interface = configuration_dict["opena3xx-network-interface"]
-        self.opena3xx_network_scan_range_cidr = configuration_dict["opena3xx-network-interface"]
-        self.opena3xx_peripheral_api_scheme = configuration_dict["opena3xx-peripheral-api-scheme"]
-        self.opena3xx_peripheral_api_ip = configuration_dict["opena3xx-peripheral-api-ip"]
-        self.opena3xx_peripheral_api_port = configuration_dict["opena3xx-peripheral-api-port"]
-        self.opena3xx_peripheral_keepalive_seconds = configuration_dict["opena3xx-peripheral-keepalive-seconds"]
-        self.opena3xx_amqp_host = configuration_dict["opena3xx-amqp-host"]
-        self.opena3xx_amqp_username = configuration_dict["opena3xx-amqp-username"]
-        self.opena3xx_amqp_password = configuration_dict["opena3xx-amqp-password"]
+    opena3xx_network_interface: str
+    opena3xx_network_scan_range_cidr: str
+    opena3xx_peripheral_api_scheme: str
+    opena3xx_peripheral_api_ip: str
+    opena3xx_peripheral_api_port: str
+    opena3xx_peripheral_keepalive_seconds: str
+    opena3xx_amqp_host: str
+    opena3xx_amqp_username: str
+    opena3xx_amqp_password: str
+
+    @classmethod
+    def from_api(cls, configuration_dict: Dict[str, Any]) -> "OpenA3XXConfigurationDto":
+        return cls(
+            opena3xx_network_interface=configuration_dict["opena3xx-network-interface"],
+            opena3xx_network_scan_range_cidr=configuration_dict["opena3xx-network-interface"],
+            opena3xx_peripheral_api_scheme=configuration_dict["opena3xx-peripheral-api-scheme"],
+            opena3xx_peripheral_api_ip=configuration_dict["opena3xx-peripheral-api-ip"],
+            opena3xx_peripheral_api_port=configuration_dict["opena3xx-peripheral-api-port"],
+            opena3xx_peripheral_keepalive_seconds=configuration_dict["opena3xx-peripheral-keepalive-seconds"],
+            opena3xx_amqp_host=configuration_dict["opena3xx-amqp-host"],
+            opena3xx_amqp_username=configuration_dict["opena3xx-amqp-username"],
+            opena3xx_amqp_password=configuration_dict["opena3xx-amqp-password"],
+        )
 
 
 

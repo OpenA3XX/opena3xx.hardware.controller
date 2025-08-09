@@ -1,5 +1,4 @@
 import logging
-import os
 import socket
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from ipaddress import IPv4Network
@@ -12,23 +11,22 @@ from opena3xx.http import OpenA3xxHttpClient
 
 
 class OpenA3XXNetworkingClient:
+    """Discovers the Peripheral API on the local subnet and validates it.
+
+    The client determines the active interface via the default route, derives
+    the subnet from the interface netmask, scans for TCP port 5000, and
+    validates candidates by calling the API heartbeat endpoint.
+    """
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def start_api_discovery(self) -> Tuple[str, str, int]:
+        """Discover the API and return (scheme, host, port)."""
         try:
-            scheme = os.getenv("OPENA3XX_API_SCHEME", "http")
-            env_host = os.getenv("OPENA3XX_API_HOST")
-            port = int(os.getenv("OPENA3XX_API_PORT", "5000"))
-            self.logger.info(f"Discovery parameters: scheme={scheme}, env_host={env_host}, port={port}")
-
-            if env_host:
-                self.logger.info(f"Using OPENA3XX_API_HOST override: {env_host}:{port}")
-                if self.__ping_request_target(scheme, env_host, port):
-                    return scheme, env_host, port
-                raise OpenA3XXNetworkingException(
-                    f"API at {scheme}://{env_host}:{port} not responding to ping")
+            scheme = "http"
+            port = 5000
+            self.logger.info(f"Discovery parameters: scheme={scheme}, port={port}")
 
             interface = self.__discover_default_interface()
             local_ip, netmask = self.__discover_local_ip_and_netmask(interface)
@@ -48,6 +46,7 @@ class OpenA3XXNetworkingClient:
             raise OpenA3XXNetworkingException(ex)
 
     def __ping_request_target(self, scheme: str, target_ip: str, target_port: int) -> bool:
+        """Send a heartbeat ping to confirm a valid API is responding."""
         try:
             http_client = OpenA3xxHttpClient(scheme, target_ip, target_port)
             self.logger.debug(f"Sending ping request to {scheme}://{target_ip}:{target_port}/core/heartbeat/ping")
@@ -64,9 +63,11 @@ class OpenA3XXNetworkingClient:
             return False
 
     def __scan_network_for_api(self, scheme: str, network: IPv4Network, port: int) -> Optional[str]:
+        """Scan the subnet for a host accepting connections on the API port."""
         self.logger.info("Started Scanning Network")
+        max_workers = 64
         # small pool to avoid overwhelming the Pi
-        with ThreadPoolExecutor(max_workers=64) as executor:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {}
             total_hosts = 0
             for ip in network.hosts():
@@ -91,6 +92,7 @@ class OpenA3XXNetworkingClient:
         return None
 
     def __discover_default_interface(self) -> str:
+        """Return the interface name that has the default IPv4 gateway."""
         gateways = ni.gateways()
         default = gateways.get('default', {})
         if ni.AF_INET in default and default[ni.AF_INET]:
@@ -106,6 +108,7 @@ class OpenA3XXNetworkingClient:
         raise RuntimeError("No IPv4 interface found")
 
     def __discover_local_ip_and_netmask(self, interface: str) -> tuple[str, str]:
+        """Return (ip, netmask) for the given interface."""
         self.logger.info(f"Discovering Local IP and netmask on interface {interface}")
         addrs = ni.ifaddresses(interface)
         ip = addrs[ni.AF_INET][0]['addr']
@@ -114,6 +117,7 @@ class OpenA3XXNetworkingClient:
         return ip, netmask
 
     def __compute_network(self, ip: str, netmask: str) -> IPv4Network:
+        """Compute the IPv4Network from an IP and dotted netmask string."""
         # Convert netmask to prefixlen
         packed = socket.inet_aton(netmask)
         bits = bin(int.from_bytes(packed, 'big')).count('1')
@@ -123,6 +127,7 @@ class OpenA3XXNetworkingClient:
 
     @staticmethod
     def __probe_host(host: str, port: int) -> bool:
+        """Attempt a TCP connect to (host, port); return True if open."""
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             s.settimeout(0.5)

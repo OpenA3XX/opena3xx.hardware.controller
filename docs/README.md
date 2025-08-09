@@ -6,7 +6,7 @@ This directory contains documentation for the OpenA3XX Hardware Controller.
 - Call chain analysis: see `call-chains.md`
 - Hardware control (MCP23017, LEDs, GPIO): see `hardware.md`
 - Messaging (RabbitMQ/AMQP): see `messaging.md`
-- Networking and HTTP API: see `networking-http.md`
+- Networking and HTTP API: see `networking-http.md` (no env vars; discovery uses fixed defaults and API ping)
 - Configuration: see `configuration.md`
 
 

@@ -16,7 +16,18 @@ echo -e "${GREEN}OK, let's start the install!${NC}"
 
 sudo apt-get update
 sudo apt-get install -y python3-lgpio python3-libgpiod gpiod
-Ensure the service user is in the gpio group: id; if not: sudo adduser pi gpio; reboot
+# Optional fallback backend (RPi.GPIO) if desired
+# sudo apt-get install -y python3-rpi.gpio
+
+# Ensure the service user has access to GPIO device
+if ! id -nG pi | grep -qw gpio; then
+  sudo adduser pi gpio || true
+fi
+
+# Enable I2C (non-interactive), will be effective after reboot
+if command -v raspi-config >/dev/null 2>&1; then
+  sudo raspi-config nonint do_i2c 0 || true
+fi
 
 figlet "OpenA3XX Hardware Controller" | /usr/games/lolcat -f
 

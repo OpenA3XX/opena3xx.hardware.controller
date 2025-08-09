@@ -1,15 +1,24 @@
+"""CLI entrypoint that orchestrates discovery, HTTP, AMQP, and hardware init.
+
+Behavior:
+- Discovers the Peripheral API, fetches board details and configuration
+- Initializes RabbitMQ and the MCP23017-based hardware service
+- Enters a keepalive loop and clears MCP interrupts periodically
+- Restarts on failure; supports graceful shutdown via SIGINT/SIGTERM
+"""
+
 import os
 import logging
 import time
+import signal
+import threading
 import click
 from opena3xx.hardware.gpio_shim import GPIO
 from art import *
-from tabulate import tabulate
 
 from opena3xx.amqp import OpenA3XXMessagingService
 from opena3xx.exceptions import OpenA3XXNetworkingException, OpenA3XXI2CRegistrationException, \
     OpenA3XXRabbitMqPublishingException
-from opena3xx.hardware.opena3xx_lights import OpenA3XXHardwareLightsService
 from opena3xx.hardware.opena3xx_mcp23017 import OpenA3XXHardwareService
 from opena3xx.logging import log_init
 from opena3xx.models import FAULT_LED, MESSAGING_LED, GENERAL_LED
@@ -19,16 +28,34 @@ from opena3xx.models import INPUT_SWITCH, EXTENDER_CHIPS_RESET
 
 log_init()
 logger = logging.getLogger("main")
+SHUTDOWN_EVENT = threading.Event()
+
+
+def _install_signal_handlers():
+    def _handler(signum, frame):
+        logger.info(f"Signal received: {signum}. Initiating graceful shutdown...")
+        SHUTDOWN_EVENT.set()
+
+    try:
+        signal.signal(signal.SIGINT, _handler)
+        signal.signal(signal.SIGTERM, _handler)
+    except Exception:
+        pass
 
 
 def screen_clear():
+    """Clear the terminal screen in a cross-platform manner."""
     if os.name == 'posix':
         _ = os.system('clear')
     else:
         _ = os.system('cls')
 
-
 def main(hardware_board_id: int):
+    """Main controller routine for a single board id.
+
+    Performs API discovery, configuration fetch, AMQP initialization, and
+    hardware setup. On success, enters a keepalive loop until shutdown.
+    """
     GPIO.cleanup()
     print("------------------------------------------------------------------------------------------------------")
     tprint("OPENA3XX")
@@ -48,7 +75,7 @@ def main(hardware_board_id: int):
             hardware_service = OpenA3XXHardwareService(rabbitmq_client, hardware_board_id)
             hardware_service.init_and_start(board_details)
 
-            while True:
+            while not SHUTDOWN_EVENT.is_set():
                 rabbitmq_client.keep_alive(hardware_board_id)
 
                 for bus in hardware_service.extender_bus_details:
@@ -84,17 +111,24 @@ def main(hardware_board_id: int):
         GPIO.output(FAULT_LED, GPIO.HIGH)
         logger.critical(f"General Exception occurred with message {ex}")
         raise
+    finally:
+        try:
+            GPIO.cleanup()
+        except Exception:
+            pass
 
 
 @click.command()
 @click.option('--hardware-board-id', 'hardware_board_id', help="Hardware Board Identifier")
 def start(hardware_board_id: int):
+    """CLI entrypoint that validates input and supervises the controller loop."""
     if hardware_board_id is None:
         logger.critical("Hardware Board Identifier Parameter is required to run the hardware controller. Check "
                         "--hardware-board-id option.")
         exit(-1)
 
-    while True:
+    _install_signal_handlers()
+    while not SHUTDOWN_EVENT.is_set():
         try:
             logger.info("OpenA3XX Hardware Controller Started")
 
@@ -103,6 +137,9 @@ def start(hardware_board_id: int):
             logger.warning("Restarting OpenA3XX Hardware Controller in 5 seconds...")
             time.sleep(5)
             logger.warning("Restarting Now.")
+        finally:
+            if SHUTDOWN_EVENT.is_set():
+                break
 
 
 if __name__ == '__main__':

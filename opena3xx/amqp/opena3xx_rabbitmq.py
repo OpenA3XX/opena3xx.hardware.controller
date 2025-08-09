@@ -33,6 +33,11 @@ class OpenA3XXMessagingService:
         # self.rabbitmq_keepalive_exchange = "keepalive"
 
     def init_and_start(self):
+        """Initialize RabbitMQ connection and channels, declare exchanges.
+
+        Uses parameters fetched from the API configuration. Exchanges are
+        declared idempotently, and delivery confirms are enabled when possible.
+        """
         try:
             self.logger.info("RabbitMQ Connection Init Start: Started")
             configuration = self.configuration_data
@@ -42,9 +47,17 @@ class OpenA3XXMessagingService:
             host = configuration["opena3xx-amqp-host"]
             port = int(configuration["opena3xx-amqp-port"])
             vhost = configuration.get("opena3xx-amqp-vhost", "/")
-            self.logger.info(f"AMQP parameters: host={host}, port={port}, vhost={vhost}, user={username}")
+            self.logger.info(f"AMQP parameters: host={host}, port={port}, vhost={vhost}")
+            # Avoid logging credentials
             credentials = pika.PlainCredentials(username, password)
-            parameters = pika.ConnectionParameters(host, port, vhost, credentials)
+            parameters = pika.ConnectionParameters(
+                host=host,
+                port=port,
+                virtual_host=vhost,
+                credentials=credentials,
+                heartbeat=30,
+                blocked_connection_timeout=10,
+            )
             self.rabbitmq_data_exchange = "opena3xx.hardware_events.input_selectors"
             self.rabbitmq_keepalive_exchange = "opena3xx.hardware_boards.keep_alive"
 
@@ -57,14 +70,24 @@ class OpenA3XXMessagingService:
             self.data_channel = amqp_connection.channel()
             self.logger.debug("AMQP data channel created")
             self.logger.info(f"Declaring Exchange: {self.rabbitmq_data_exchange}")
-            self.data_channel.exchange_declare(exchange=self.rabbitmq_data_exchange)
+            try:
+                self.data_channel.exchange_declare(exchange=self.rabbitmq_data_exchange, exchange_type='fanout', durable=True)
+            except Exception as ex:
+                self.logger.warning(f"Exchange declare warning (data): {ex}")
+            try:
+                self.data_channel.confirm_delivery()
+            except Exception:
+                pass
 
             self.keepalive_channel = amqp_connection.channel()
             self.logger.debug("AMQP keepalive channel created")
 
             self.logger.info("RabbitMQ Connection Init Start: Completed")
             self.logger.info(f"Declaring Exchange: {self.rabbitmq_keepalive_exchange}")
-            self.keepalive_channel.exchange_declare(exchange=self.rabbitmq_keepalive_exchange)
+            try:
+                self.keepalive_channel.exchange_declare(exchange=self.rabbitmq_keepalive_exchange, exchange_type='fanout', durable=True)
+            except Exception as ex:
+                self.logger.warning(f"Exchange declare warning (keepalive): {ex}")
             #GPIO.output(MESSAGING_LED, GPIO.LOW)
 
         except Exception as ex:
@@ -72,6 +95,11 @@ class OpenA3XXMessagingService:
             raise ex
 
     def publish_hardware_event(self, hardware_board_id: int, extender_bus_bit_details: dict):
+        """Publish a hardware input event to the data exchange.
+
+        The payload includes board, bus, bit and selector identifiers with a
+        UTC timestamp. Reinitializes the channel if it is closed.
+        """
         try:
             if self.data_channel.is_closed:
                 self.logger.critical("Data Channel is closed!")
@@ -99,6 +127,7 @@ class OpenA3XXMessagingService:
             raise OpenA3XXRabbitMqPublishingException(ex)
 
     def keep_alive(self, hardware_board_id: int):
+        """Publish periodic keepalive messages to the keepalive exchange."""
 
         if self.keepalive_channel.is_closed:
             self.logger.critical("Keep Alive Channel is closed!")

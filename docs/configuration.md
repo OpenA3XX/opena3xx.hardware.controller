@@ -1,19 +1,13 @@
 ### Configuration
 
-The application is now configurationless locally; it discovers the API endpoint and fetches configuration remotely.
+- The application is configurationless locally; it discovers the API and fetches all settings remotely.
+- Local file `configuration/configuration.json` is not used at runtime.
+- Remote configuration (AMQP host/port/username/vhost, keepalive seconds, etc.) is fetched from the API via `GET /configuration` and is expected as a flat JSON object (no top-level wrapper).
 
-- Local file `configuration/configuration.json` is no longer used at runtime.
-- Remote configuration (AMQP credentials, keepalive seconds, etc.) is fetched from the API via `GET /configuration`.
+Networking discovery is automatic:
 
-Environment variable overrides (optional):
-
-- `OPENA3XX_API_SCHEME` (default: `http`)
-- `OPENA3XX_API_HOST` (if set, discovery scan is skipped and this host is used)
-- `OPENA3XX_API_PORT` (default: `5000`)
-
-Network detection on Raspberry Pi is automatic:
-
-- Active interface is resolved via default route (fallback to first IPv4-capable interface).
-- CIDR is computed from the interface netmask; subnet is scanned concurrently for the API.
+- The active interface is determined via the default route (fallback to first IPv4-capable interface).
+- The subnet is derived from the interface netmask and scanned for the Peripheral API.
+- The API is expected at scheme `http` on port `5000`. There are no environment variables used for discovery or configuration.
 
 

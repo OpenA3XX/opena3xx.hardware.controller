@@ -13,6 +13,11 @@ sudo apt install figlet &> /dev/null
 # sudo apt install lolcat &> /dev/null
 sudo apt install lolcat
 echo -e "${GREEN}OK, let's start the install!${NC}"
+
+sudo apt-get update
+sudo apt-get install -y python3-lgpio python3-libgpiod gpiod
+Ensure the service user is in the gpio group: id; if not: sudo adduser pi gpio; reboot
+
 figlet "OpenA3XX Hardware Controller" | /usr/games/lolcat -f
 
 # Add the required pin data to the startup config.

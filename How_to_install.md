@@ -117,6 +117,8 @@ sudo apt-get install python
 
 sudo apt install python3-pip
 
+sudo apt install python3-rpi.gpio
+
 git clone https://github.com/OpenA3XX/opena3xx.hardware.controller.git
 
 cd /home/pi/opena3xx.hardware.controller/setup

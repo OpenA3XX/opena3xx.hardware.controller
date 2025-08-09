@@ -3,7 +3,7 @@ import logging
 import board
 import time
 import busio
-from RPi import GPIO
+import RPi.GPIO as GPIO
 from adafruit_mcp230xx.mcp23017 import MCP23017
 from digitalio import Direction, Pull
 from tabulate import tabulate
@@ -29,6 +29,7 @@ class OpenA3XXHardwareService:
 
     def bus_interrupt(self, port):
         GPIO.output(GENERAL_LED, GPIO.HIGH)
+        self.logger.debug(f"Interrupt received on port {port}")
         _bus = None
         _bus_instance = None
         _bus_pins = []
@@ -39,14 +40,25 @@ class OpenA3XXHardwareService:
                 _bus_instance = bus["bus_instance"]
                 break
 
+        if _bus is None or _bus_instance is None:
+            self.logger.warning(f"No extender bus matched for interrupt port {port}")
+            GPIO.output(GENERAL_LED, GPIO.LOW)
+            return
+
+        self.logger.debug(f"Matched interrupt to bus id={_bus['extender_bus_id']} name={_bus['extender_bus_name']}")
+
         for bit in self.extender_bus_bit_details:
             if bit["extender_bus_id"] == _bus["extender_bus_id"]:
                 _bus_pins.append(bit)
 
+        self.logger.debug(f"MCP int_flag values: {list(_bus_instance.int_flag)}")
         for pin_flag in _bus_instance.int_flag:
             for pin in _bus_pins:
                 if int(pin["bus_bit"]) == int(pin_flag):
-                    if not pin["extender_bit_instance"].value:
+                    pin_value = pin["extender_bit_instance"].value
+                    self.logger.debug(
+                        f"Flag {pin_flag} -> bit {pin['bus_bit']} name={pin['extender_bit_name']} value={pin_value}")
+                    if not pin_value:
                         if pin['input_selector_name'] is not None:
                             try:
                                 _bus_instance.clear_ints()
@@ -58,15 +70,23 @@ class OpenA3XXHardwareService:
                             except OpenA3XXRabbitMqPublishingException as ex:
                                 GPIO.output(FAULT_LED, GPIO.HIGH)
                                 raise ex
+                        else:
+                            self.logger.debug("Interrupt from a non-mapped input selector; ignoring")
                     break
         GPIO.output(GENERAL_LED, GPIO.LOW)
 
     def init_and_start(self, board_details: HardwareBoardDetailsDto):
-        GPIO.setmode(GPIO.BCM)
+        self.logger.info("Initializing hardware service (GPIO/MCP23017)")
+        try:
+            GPIO.setmode(GPIO.BCM)
+        except Exception as ex:
+            self.logger.critical(f"Failed to set GPIO mode: {ex}")
+            raise OpenA3XXI2CRegistrationException(ex)
 
         extender_address_start: int = EXTENDER_ADDRESS_START
         # ---------------------------------------------
         # Initialize the I2C bus:
+        self.logger.debug("Initializing I2C bus on board.SCL/board.SDA")
         i2c = busio.I2C(board.SCL, board.SDA)
 
         GPIO.setup(MESSAGING_LED, GPIO.OUT)
@@ -74,6 +94,11 @@ class OpenA3XXHardwareService:
         GPIO.setup(GENERAL_LED, GPIO.OUT)
         GPIO.setup(EXTENDER_CHIPS_RESET, GPIO.OUT)
         GPIO.setup(INPUT_SWITCH, GPIO.IN)
+        try:
+            input_switch_value = GPIO.input(INPUT_SWITCH)
+            self.logger.info(f"INPUT_SWITCH initial state: {'LOW' if input_switch_value == GPIO.LOW else 'HIGH'}")
+        except Exception:
+            self.logger.warning("Unable to read INPUT_SWITCH initial state")
         OpenA3XXHardwareLightsService.init_pattern()
 
         self.logger.info("Resetting MCP23017 ICs Reset Pin: Started")
@@ -81,7 +106,7 @@ class OpenA3XXHardwareService:
         time.sleep(1)
         GPIO.output(EXTENDER_CHIPS_RESET, GPIO.HIGH)
         time.sleep(1)
-        self.logger.info("Resetting MCP23017 ICs Reset Pin: Started")
+        self.logger.info("Resetting MCP23017 ICs Reset Pin: Completed")
 
         # ---------------------------------------------
         for extender in board_details.io_extender_buses:
@@ -104,6 +129,8 @@ class OpenA3XXHardwareService:
                                   "bus_instance": bus,
                                   "interrupt_pin": INTERRUPT_EXTENDER_MAP[extender.name]}
 
+            self.logger.debug(
+                f"Configuring interrupt GPIO pin {extender_data_dict['interrupt_pin']} for bus {extender.name}")
             GPIO.setup(int(extender_data_dict["interrupt_pin"]), GPIO.IN, GPIO.PUD_UP)
 
             GPIO.add_event_detect(int(extender_data_dict["interrupt_pin"]),
@@ -112,6 +139,7 @@ class OpenA3XXHardwareService:
                                   bouncetime=self.debouncing_time)
             self.extender_bus_details.append(extender_data_dict)
 
+            self.logger.debug("Configuring MCP23017 interrupt registers and defaults")
             bus.interrupt_enable = 0xFFFF
             bus.interrupt_configuration = 0x0000  # interrupt on any change
             bus.io_control = 0x44  # Interrupt as open drain and mirrored
@@ -141,9 +169,13 @@ class OpenA3XXHardwareService:
                 if extender_bit_data_dict["is_input"]:
                     pin.direction = Direction.INPUT
                     pin.pull = Pull.UP
+                    self.logger.debug(
+                        f"Configured extender bit '{extender_bit.name}' as INPUT (bus_bit={bus_bit}) with PULL.UP")
 
                 if extender_bit_data_dict["is_output"]:
                     pin.direction = Direction.OUTPUT
+                    self.logger.debug(
+                        f"Configured extender bit '{extender_bit.name}' as OUTPUT (bus_bit={bus_bit})")
 
                 self.extender_bus_bit_details.append(extender_bit_data_dict)
                 bit_counter += 1

@@ -3,7 +3,7 @@ import json
 import logging
 
 import pika
-from RPi import GPIO
+import RPi.GPIO as GPIO
 from pika.adapters.blocking_connection import BlockingChannel
 
 from opena3xx.exceptions import OpenA3XXRabbitMqPublishingException
@@ -20,20 +20,27 @@ class OpenA3XXMessagingService:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("Fetching remote configuration from API for AMQP setup")
         self.configuration_data = http_client.get_configuration()
-        if not self.configuration_data or "configuration" not in self.configuration_data:
-            self.logger.critical("Remote configuration missing or invalid; cannot initialize AMQP")
-        self.rabbitmq_data_exchange = ""
-        self.rabbitmq_keepalive_exchange = ""
+        # API returns a flat JSON object (no top-level 'configuration')
+        required_keys = [
+            "opena3xx-amqp-host",
+            "opena3xx-amqp-port",
+            "opena3xx-amqp-username",
+            "opena3xx-amqp-password",
+        ]
+        if not isinstance(self.configuration_data, dict) or not all(k in self.configuration_data for k in required_keys):
+            self.logger.critical("Remote configuration missing required AMQP keys; cannot initialize AMQP")
+        # self.rabbitmq_data_exchange = "hardware-input-selectors"
+        # self.rabbitmq_keepalive_exchange = "keepalive"
 
     def init_and_start(self):
         try:
             self.logger.info("RabbitMQ Connection Init Start: Started")
-            configuration = self.configuration_data["configuration"]
+            configuration = self.configuration_data
 
             username = configuration["opena3xx-amqp-username"]
             password = configuration["opena3xx-amqp-password"]
             host = configuration["opena3xx-amqp-host"]
-            port = configuration["opena3xx-amqp-port"]
+            port = int(configuration["opena3xx-amqp-port"])
             vhost = configuration.get("opena3xx-amqp-vhost", "/")
             self.logger.info(f"AMQP parameters: host={host}, port={port}, vhost={vhost}, user={username}")
             credentials = pika.PlainCredentials(username, password)
@@ -49,15 +56,15 @@ class OpenA3XXMessagingService:
             self.logger.debug("AMQP connection established")
             self.data_channel = amqp_connection.channel()
             self.logger.debug("AMQP data channel created")
-            #self.logger.info(f"Declaring Exchange: {self.rabbitmq_data_exchange}")
-            #self.data_channel.exchange_declare(exchange=self.rabbitmq_data_exchange)
+            self.logger.info(f"Declaring Exchange: {self.rabbitmq_data_exchange}")
+            self.data_channel.exchange_declare(exchange=self.rabbitmq_data_exchange)
 
             self.keepalive_channel = amqp_connection.channel()
             self.logger.debug("AMQP keepalive channel created")
 
             self.logger.info("RabbitMQ Connection Init Start: Completed")
-            #self.logger.info(f"Declaring Exchange: {self.rabbitmq_keepalive_exchange}")
-            #self.keepalive_channel.exchange_declare(exchange=self.rabbitmq_keepalive_exchange)
+            self.logger.info(f"Declaring Exchange: {self.rabbitmq_keepalive_exchange}")
+            self.keepalive_channel.exchange_declare(exchange=self.rabbitmq_keepalive_exchange)
             #GPIO.output(MESSAGING_LED, GPIO.LOW)
 
         except Exception as ex:

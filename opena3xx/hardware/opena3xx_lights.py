@@ -1,6 +1,6 @@
 import time
 
-from RPi import GPIO
+import RPi.GPIO as GPIO
 
 from opena3xx.models import FAULT_LED, GENERAL_LED, MESSAGING_LED
 

@@ -58,8 +58,8 @@ def main(hardware_board_id: int):
     """
     GPIO.cleanup()
     print("------------------------------------------------------------------------------------------------------")
-    tprint("OPENA3XX")
-    tprint("Hardware Controller", font="cybermedium")
+    tprint("OPENA3XX", font="rnd-large")
+    tprint("Hardware Controller", font="rnd-large")
     print("------------------------------------------------------------------------------------------------------")
     try:
         logger.info("OpenA3XX Hardware Controller: Application Started")
@@ -78,9 +78,20 @@ def main(hardware_board_id: int):
             while not SHUTDOWN_EVENT.is_set():
                 rabbitmq_client.keep_alive(hardware_board_id)
 
+                # Avoid clearing interrupts periodically as it can race with
+                # software edge detection and mask events. Only clear if the
+                # IRQ line appears stuck low.
                 for bus in hardware_service.extender_bus_details:
-                    _bus_instance = bus["bus_instance"]
-                    _bus_instance.clear_ints()
+                    try:
+                        irq_pin = int(bus["interrupt_pin"])
+                        if GPIO.input(irq_pin) == GPIO.LOW:
+                            logger.debug(
+                                f"IRQ line low for bus {bus['extender_bus_name']}; clearing pending interrupts"
+                            )
+                            _bus_instance = bus["bus_instance"]
+                            _bus_instance.clear_ints()
+                    except Exception:
+                        pass
 
                 if GPIO.input(INPUT_SWITCH) == GPIO.LOW:
                     GPIO.output(FAULT_LED, GPIO.HIGH)

@@ -57,29 +57,38 @@ class OpenA3XXHardwareService:
             if bit["extender_bus_id"] == _bus["extender_bus_id"]:
                 _bus_pins.append(bit)
 
-        self.logger.debug(f"MCP int_flag values: {list(_bus_instance.int_flag)}")
-        for pin_flag in _bus_instance.int_flag:
-            for pin in _bus_pins:
-                if int(pin["bus_bit"]) == int(pin_flag):
-                    pin_value = pin["extender_bit_instance"].value
-                    self.logger.debug(
-                        f"Flag {pin_flag} -> bit {pin['bus_bit']} name={pin['extender_bit_name']} value={pin_value}")
-                    if not pin_value:
-                        if pin['input_selector_name'] is not None:
-                            try:
-                                _bus_instance.clear_ints()
-                                GPIO.output(MESSAGING_LED, GPIO.HIGH)
-                                self.messaging_service.publish_hardware_event(self.hardware_board_id, pin)
-                                GPIO.output(MESSAGING_LED, GPIO.LOW)
-                                self.logger.warning(
-                                    f"Hardware Input Selector: {pin['input_selector_name']} ===> Pressed")
-                            except OpenA3XXRabbitMqPublishingException as ex:
-                                GPIO.output(FAULT_LED, GPIO.HIGH)
-                                raise ex
-                        else:
-                            self.logger.debug("Interrupt from a non-mapped input selector; ignoring")
-                    break
-        GPIO.output(GENERAL_LED, GPIO.LOW)
+        try:
+            flags = list(_bus_instance.int_flag)
+            self.logger.debug(f"MCP int_flag values: {flags}")
+            for pin_flag in flags:
+                for pin in _bus_pins:
+                    if int(pin["bus_bit"]) == int(pin_flag):
+                        pin_value = pin["extender_bit_instance"].value
+                        self.logger.debug(
+                            f"Flag {pin_flag} -> bit {pin['bus_bit']} name={pin['extender_bit_name']} value={pin_value}"
+                        )
+                        if not pin_value:
+                            if pin['input_selector_name'] is not None:
+                                try:
+                                    GPIO.output(MESSAGING_LED, GPIO.HIGH)
+                                    self.messaging_service.publish_hardware_event(self.hardware_board_id, pin)
+                                    GPIO.output(MESSAGING_LED, GPIO.LOW)
+                                    self.logger.warning(
+                                        f"Hardware Input Selector: {pin['input_selector_name']} ===> Pressed"
+                                    )
+                                except OpenA3XXRabbitMqPublishingException as ex:
+                                    GPIO.output(FAULT_LED, GPIO.HIGH)
+                                    raise ex
+                            else:
+                                self.logger.debug("Interrupt from a non-mapped input selector; ignoring")
+                        break
+        finally:
+            # Always clear interrupts to release the IRQ line
+            try:
+                _bus_instance.clear_ints()
+            except Exception:
+                pass
+            GPIO.output(GENERAL_LED, GPIO.LOW)
 
     def init_and_start(self, board_details: HardwareBoardDetailsDto):
         """Initialize GPIO, I2C, extenders, and register interrupt handlers."""
@@ -90,12 +99,17 @@ class OpenA3XXHardwareService:
             self.logger.critical(f"Failed to set GPIO mode: {ex}")
             raise OpenA3XXI2CRegistrationException(ex)
 
-        extender_address_start: int = EXTENDER_ADDRESS_START
-        # ---------------------------------------------
-        # Initialize the I2C bus:
-        self.logger.debug("Initializing I2C bus on board.SCL/board.SDA")
-        i2c = busio.I2C(board.SCL, board.SDA)
+        i2c = self._init_i2c()
+        self._setup_gpio_basics()
+        self._reset_extenders()
+        self._register_extenders(i2c, board_details)
+        self._log_summary()
 
+    def _init_i2c(self):
+        self.logger.debug("Initializing I2C bus on board.SCL/board.SDA")
+        return busio.I2C(board.SCL, board.SDA)
+
+    def _setup_gpio_basics(self):
         # Initialize GPIO pins for LEDs and switches
         GPIO.setup(MESSAGING_LED, GPIO.OUT)
         GPIO.setup(FAULT_LED, GPIO.OUT)
@@ -113,6 +127,7 @@ class OpenA3XXHardwareService:
         # Initialize the LED pattern
         OpenA3XXHardwareLightsService.init_pattern()
 
+    def _reset_extenders(self):
         # Reset the MCP23017 ICs
         self.logger.info("Resetting MCP23017 ICs Reset Pin: Started")
         GPIO.output(EXTENDER_CHIPS_RESET, GPIO.LOW)
@@ -121,87 +136,168 @@ class OpenA3XXHardwareService:
         time.sleep(1)
         self.logger.info("Resetting MCP23017 ICs Reset Pin: Completed")
 
-        # ---------------------------------------------
+    def _register_extenders(self, i2c, board_details: HardwareBoardDetailsDto):
+        extender_address_start: int = EXTENDER_ADDRESS_START
         for extender in board_details.io_extender_buses:
-
-            self.logger.info(f"Registering Bus Extender: Id:{extender.id}, {extender.name} with HEX address: "
-                             f"{hex(extender_address_start)}")
-            try:
-                GPIO.output(GENERAL_LED, GPIO.HIGH)
-                bus = MCP23017(i2c, address=extender_address_start)
-                GPIO.output(GENERAL_LED, GPIO.LOW)
-                self.logger.info(
-                    f"Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}: Found")
-            except Exception as ex:
-                self.logger.critical(
-                    f"Failed Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}")
-                raise OpenA3XXI2CRegistrationException(ex)
-
-            extender_data_dict = {"extender_bus_id": extender.id,
-                                  "extender_bus_name": extender.name,
-                                  "bus_instance": bus,
-                                  "interrupt_pin": INTERRUPT_EXTENDER_MAP[extender.name]}
-
-            self.logger.debug(
-                f"Configuring interrupt GPIO pin {extender_data_dict['interrupt_pin']} for bus {extender.name}")
-            GPIO.setup(int(extender_data_dict["interrupt_pin"]), GPIO.IN, GPIO.PUD_UP)
-
-            GPIO.add_event_detect(int(extender_data_dict["interrupt_pin"]),
-                                  GPIO.FALLING,
-                                  callback=self.bus_interrupt,
-                                  bouncetime=self.debouncing_time)
-            self.extender_bus_details.append(extender_data_dict)
-
-            self.logger.debug("Configuring MCP23017 interrupt registers and defaults")
-            bus.interrupt_enable = 0xFFFF
-            bus.interrupt_configuration = 0x0000  # interrupt on any change
-            bus.io_control = 0x44  # Interrupt as open drain and mirrored
-            bus.clear_ints()  # Interrupts need to be cleared initially
-            bus.default_value = 0x0000
-
-            bit_counter = 0
-            for extender_bit in extender.io_extender_bus_bits:
-
-                # Parse the bit from the name
-                bus_bit = parse_bit_from_name(extender_bit.name)
-
-                # Get the pin from the MCP23017
-                pin = bus.get_pin(bus_bit)
-
-                # Create a dictionary of the extender bit data
-                extender_bit_data_dict = dict(extender_bus_id=extender.id, extender_bus_name=extender.name, bus=bus,
-                                              extender_bit_id=extender_bit.id, extender_bit_name=extender_bit.name,
-                                              bus_bit=bus_bit,
-                                              is_input=True if extender_bit.hardware_input_selector_fullname is not None else False,
-                                              input_selector_name=extender_bit.hardware_input_selector_fullname,
-                                              input_selector_id=extender_bit.hardware_input_selector_id,
-                                              is_output=True if extender_bit.hardware_output_selector_fullname is not None else False,
-                                              output_selector_name=extender_bit.hardware_output_selector_fullname,
-                                              output_selector_id=extender_bit.hardware_output_selector_id,
-                                              extender_bit_instance=pin)
-
-                # Set Default Input Mode to Output. Not doing this will cause abnormal interrupts which are caused
-                # due to the pin being in unstable state (not 0v/5v/3.3v)
-                if extender_bit_data_dict["is_input"] is False and extender_bit_data_dict["is_output"] is False:
-                    extender_bit_data_dict["is_output"] = True
-
-                # Configure the pin as input if it is an input selector
-                if extender_bit_data_dict["is_input"]:
-                    pin.direction = Direction.INPUT
-                    pin.pull = Pull.UP
-                    self.logger.debug(
-                        f"Configured extender bit '{extender_bit.name}' as INPUT (bus_bit={bus_bit}) with PULL.UP")
-
-                # Configure the pin as output if it is an output selector
-                if extender_bit_data_dict["is_output"]:
-                    pin.direction = Direction.OUTPUT
-                    self.logger.debug(
-                        f"Configured extender bit '{extender_bit.name}' as OUTPUT (bus_bit={bus_bit})")
-
-                self.extender_bus_bit_details.append(extender_bit_data_dict)
-                bit_counter += 1
+            self._register_single_extender(i2c, extender, extender_address_start)
             extender_address_start += 1
 
+    def _register_single_extender(self, i2c, extender, address: int) -> None:
+        self.logger.info(
+            f"Registering Bus Extender: Id:{extender.id}, {extender.name} with HEX address: {hex(address)}"
+        )
+        GPIO.output(GENERAL_LED, GPIO.HIGH)
+        try:
+            bus = MCP23017(i2c, address=address)
+            self.logger.info(
+                f"Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}: Found"
+            )
+        except Exception as ex:
+            self.logger.critical(
+                f"Failed Registering Bus Extender with details: Id:{extender.id}, Name:{extender.name}"
+            )
+            raise OpenA3XXI2CRegistrationException(ex)
+        finally:
+            GPIO.output(GENERAL_LED, GPIO.LOW)
+
+        extender_data_dict = {
+            "extender_bus_id": extender.id,
+            "extender_bus_name": extender.name,
+            "bus_instance": bus,
+            "interrupt_pin": INTERRUPT_EXTENDER_MAP[extender.name],
+        }
+
+        # Configure MCP23017 core registers first
+        self.logger.debug("Configuring MCP23017 core registers and defaults")
+        bus.io_control = 0x44  # Interrupt as open drain and mirrored
+        bus.default_value = 0x0000
+        bus.interrupt_configuration = 0x0000  # interrupt on any change
+        bus.clear_ints()  # clear any stale flags
+
+        # Configure all extender bits for this bus (direction/pulls/defaults)
+        for extender_bit in extender.io_extender_bus_bits:
+            self._configure_extender_bit(bus, extender, extender_bit)
+
+        # Compute interrupt enable mask for input pins only
+        input_interrupt_mask = 0
+        for bit in extender.io_extender_bus_bits:
+            try:
+                bus_bit = parse_bit_from_name(bit.name)
+                if bit.hardware_input_selector_fullname:
+                    input_interrupt_mask |= (1 << bus_bit)
+            except Exception:
+                # Ignore malformed names here; they are already logged in _configure_extender_bit
+                continue
+
+        # Optional diagnostic override: enable all interrupt bits if requested
+        try:
+            import os
+            if os.getenv("OPENA3XX_FORCE_ENABLE_ALL_INTERRUPTS", "0") in ("1", "true", "True"):
+                self.logger.warning(
+                    "Environment override OPENA3XX_FORCE_ENABLE_ALL_INTERRUPTS active: enabling 0xFFFF"
+                )
+                input_interrupt_mask = 0xFFFF
+        except Exception:
+            pass
+
+        # Clear any pending interrupts before enabling
+        bus.clear_ints()
+        bus.interrupt_enable = input_interrupt_mask
+
+        # Log mask and potential misconfiguration
+        enabled_bits = [idx for idx in range(16) if (input_interrupt_mask >> idx) & 1]
+        self.logger.debug(
+            f"Interrupts enabled on input bits for {extender.name}: mask=0x{input_interrupt_mask:04X}, bits={enabled_bits}"
+        )
+        if input_interrupt_mask == 0:
+            self.logger.warning(
+                f"No input bits found for {extender.name}. Interrupts will not fire for this extender."
+            )
+
+        # Wire the Raspberry Pi interrupt after MCP is fully configured
+        self.logger.debug(
+            f"Configuring interrupt GPIO pin {extender_data_dict['interrupt_pin']} for bus {extender.name}"
+        )
+        GPIO.setup(int(extender_data_dict["interrupt_pin"]), GPIO.IN, GPIO.PUD_UP)
+        GPIO.add_event_detect(
+            int(extender_data_dict["interrupt_pin"]),
+            GPIO.FALLING,
+            callback=self.bus_interrupt,
+            bouncetime=self.debouncing_time,
+        )
+
+        # If the IRQ line is already asserted low at registration time,
+        # trigger the handler once to service any pending interrupts.
+        try:
+            if GPIO.input(int(extender_data_dict["interrupt_pin"])) == GPIO.LOW:
+                self.logger.debug(
+                    f"Interrupt line low at registration for {extender.name}; invoking handler immediately"
+                )
+                self.bus_interrupt(int(extender_data_dict["interrupt_pin"]))
+        except Exception:
+            pass
+
+        self.extender_bus_details.append(extender_data_dict)
+
+    def _configure_extender_bit(self, bus, extender, extender_bit) -> None:
+        # Parse the bit index from the name defensively
+        try:
+            bus_bit = parse_bit_from_name(extender_bit.name)
+            if not (0 <= bus_bit <= 15):
+                raise ValueError(f"Invalid bus_bit {bus_bit} for '{extender_bit.name}'")
+        except Exception as ex:
+            self.logger.error(f"Unable to parse bus bit for '{extender_bit.name}': {ex}")
+            return
+
+        pin = bus.get_pin(bus_bit)
+
+        is_input = bool(extender_bit.hardware_input_selector_fullname)
+        is_output = bool(extender_bit.hardware_output_selector_fullname)
+
+        if is_input and is_output:
+            self.logger.warning(
+                f"Extender bit '{extender_bit.name}' is marked as both INPUT and OUTPUT; prioritizing INPUT"
+            )
+
+        # Default to OUTPUT if neither role is defined to avoid floating states
+        if not is_input and not is_output:
+            is_output = True
+
+        if is_input:
+            pin.direction = Direction.INPUT
+            pin.pull = Pull.UP
+            self.logger.debug(
+                f"Configured extender bit '{extender_bit.name}' as INPUT (bus_bit={bus_bit}) with PULL.UP"
+            )
+        else:
+            pin.direction = Direction.OUTPUT
+            try:
+                pin.value = False  # known safe default level
+            except Exception:
+                pass
+            self.logger.debug(
+                f"Configured extender bit '{extender_bit.name}' as OUTPUT (bus_bit={bus_bit})"
+            )
+
+        extender_bit_data_dict = dict(
+            extender_bus_id=extender.id,
+            extender_bus_name=extender.name,
+            bus=bus,
+            extender_bit_id=extender_bit.id,
+            extender_bit_name=extender_bit.name,
+            bus_bit=bus_bit,
+            is_input=is_input,
+            input_selector_name=extender_bit.hardware_input_selector_fullname,
+            input_selector_id=extender_bit.hardware_input_selector_id,
+            is_output=is_output,
+            output_selector_name=extender_bit.hardware_output_selector_fullname,
+            output_selector_id=extender_bit.hardware_output_selector_id,
+            extender_bit_instance=pin,
+        )
+
+        self.extender_bus_bit_details.append(extender_bit_data_dict)
+
+    def _log_summary(self):
         # Log a concise view by selecting specific columns from details
         bus_columns = ["extender_bus_id", "extender_bus_name", "interrupt_pin"]
         bit_columns = [

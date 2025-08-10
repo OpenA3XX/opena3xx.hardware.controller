@@ -164,20 +164,40 @@ class GPIO:
     def _ensure_backend(cls):
         if cls._backend is not None:
             return
+        # Allow forcing a backend via environment for diagnostics
         try:
-            cls._backend = _LgpioBackend()
-            logger.info("GPIO shim using lgpio backend")
-            return
+            import os
+            forced = os.getenv("OPENA3XX_GPIO_BACKEND")
         except Exception:
-            pass
-        try:
-            cls._backend = _GpiodBackend()
-            logger.info("GPIO shim using gpiod backend")
+            forced = None
+
+        def _try_backend(ctor, name: str):
+            try:
+                cls._backend = ctor()
+                logger.info(f"GPIO shim using {name} backend")
+                return True
+            except Exception:
+                return False
+
+        if forced:
+            forced = forced.lower()
+            if forced == "rpi" and _try_backend(_RPiBackend, "RPi.GPIO"):
+                return
+            if forced == "lgpio" and _try_backend(_LgpioBackend, "lgpio"):
+                return
+            if forced == "gpiod" and _try_backend(_GpiodBackend, "gpiod"):
+                return
+            logger.warning(f"Requested OPENA3XX_GPIO_BACKEND={forced} unavailable; falling back to auto")
+
+        # Prefer RPi.GPIO first (best compatibility with Pi numbering/pull-ups)
+        if _try_backend(_RPiBackend, "RPi.GPIO"):
             return
-        except Exception:
-            pass
-        cls._backend = _RPiBackend()
-        logger.info("GPIO shim using RPi.GPIO backend")
+        if _try_backend(_LgpioBackend, "lgpio"):
+            return
+        if _try_backend(_GpiodBackend, "gpiod"):
+            return
+        # As a last resort, raise
+        raise RuntimeError("No usable GPIO backend found")
 
     @classmethod
     def setmode(cls, _mode):
@@ -224,6 +244,8 @@ class GPIO:
             while not cls._event_stop_flags.get(pin, False):
                 val = cls._backend.read(pin)
                 now = time.monotonic()
+                if val != last:
+                    logger.debug(f"GPIO {pin} state changed {last} -> {val}")
                 if edge == cls.FALLING and last == 1 and val == 0:
                     if (now - last_time) * 1000.0 >= cls._event_bounce_ms[pin]:
                         try:
@@ -237,6 +259,14 @@ class GPIO:
         t = threading.Thread(target=_loop, daemon=True)
         cls._event_threads[pin] = t
         t.start()
+
+        # If the line is already low, fire once to flush any pending active-low conditions
+        try:
+            cur = cls._backend.read(pin)
+            if edge == cls.FALLING and cur == 0:
+                callback(pin)
+        except Exception:
+            pass
 
     @classmethod
     def remove_event_detect(cls, pin: int):

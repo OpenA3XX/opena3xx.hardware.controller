@@ -13,3 +13,4 @@ adafruit-circuitpython-busdevice==5.2.13
 adafruit-circuitpython-mcp230xx==2.5.18
 Adafruit-PlatformDetect==3.81.0
 Adafruit-PureIO==1.1.11
+rich==13.7.1

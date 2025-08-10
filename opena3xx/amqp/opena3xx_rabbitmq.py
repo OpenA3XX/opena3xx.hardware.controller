@@ -1,4 +1,7 @@
 import datetime as dt
+import os
+from pathlib import Path
+import uuid
 import json
 import logging
 import threading
@@ -38,6 +41,15 @@ class OpenA3XXMessagingService:
         self._stop_publisher = threading.Event()
         self._data_connection: pika.BlockingConnection | None = None
         self._keepalive_connection: pika.BlockingConnection | None = None
+        # Disk spool for durable event storage
+        spool_dir = os.getenv("OPENA3XX_EVENT_SPOOL_DIR", "/tmp/opena3xx_event_spool")
+        self._spool_path = Path(spool_dir)
+        try:
+            self._spool_path.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            # Fallback to /tmp if provided path not writable
+            self._spool_path = Path("/tmp/opena3xx_event_spool")
+            self._spool_path.mkdir(parents=True, exist_ok=True)
 
     def init_and_start(self):
         """Initialize RabbitMQ connection and channels, declare exchanges.
@@ -64,6 +76,9 @@ class OpenA3XXMessagingService:
                 credentials=credentials,
                 heartbeat=30,
                 blocked_connection_timeout=10,
+                connection_attempts=5,
+                retry_delay=2.0,
+                socket_timeout=10,
             )
             self.rabbitmq_data_exchange = "opena3xx.hardware_events.input_selectors"
             self.rabbitmq_keepalive_exchange = "opena3xx.hardware_boards.keep_alive"
@@ -113,17 +128,32 @@ class OpenA3XXMessagingService:
             raise ex
 
     def publish_hardware_event(self, hardware_board_id: int, extender_bus_bit_details: dict):
-        """Enqueue a hardware input event for asynchronous publishing.
+        """Persist an event to disk spool and signal the publisher thread.
 
-        This method is thread-safe and returns immediately from interrupt
-        callbacks. The publisher thread handles AMQP I/O and reconnection.
+        Returns immediately from interrupt callbacks. The publisher thread
+        reads spooled events and publishes in FIFO order, surviving restarts.
         """
+        message = {
+            "hardware_board_id": hardware_board_id,
+            "extender_bit_id": extender_bus_bit_details["extender_bit_id"],
+            "extender_bit_name": extender_bus_bit_details["extender_bit_name"],
+            "extender_bus_id": extender_bus_bit_details["extender_bus_id"],
+            "extender_bus_name": extender_bus_bit_details["extender_bus_name"],
+            "input_selector_name": extender_bus_bit_details["input_selector_name"],
+            "input_selector_id": extender_bus_bit_details["input_selector_id"],
+            "pressed": bool(extender_bus_bit_details.get("pressed", False)),
+            "timestamp": str(dt.datetime.now(dt.UTC)),
+        }
         try:
-            self._event_queue.put_nowait((hardware_board_id, extender_bus_bit_details))
+            self._spool_write_message(message)
+            # Non-blocking signal to wake publisher
+            try:
+                self._event_queue.put_nowait(None)
+            except Exception:
+                pass
         except Exception as ex:
-            # Queue full or other error; light FAULT and log but don't raise into IRQ thread
             GPIO.output(FAULT_LED, GPIO.HIGH)
-            self.logger.critical(f"Failed to enqueue hardware event: {ex}")
+            self.logger.critical(f"Failed to spool hardware event: {ex}")
 
     def keep_alive(self, hardware_board_id: int):
         """Publish periodic keepalive messages to the keepalive exchange."""
@@ -153,7 +183,7 @@ class OpenA3XXMessagingService:
             self.logger.critical(f"Keepalive publish failed: {ex}")
             raise OpenA3XXRabbitMqPublishingException(ex)
 
-    # Internal helpers
+    # ----- Internal helpers -----
     def _connect_data_channel(self):
         configuration = self.configuration_data
         username = configuration["opena3xx-amqp-username"]
@@ -169,6 +199,9 @@ class OpenA3XXMessagingService:
             credentials=credentials,
             heartbeat=30,
             blocked_connection_timeout=10,
+            connection_attempts=5,
+            retry_delay=2.0,
+            socket_timeout=10,
         )
         try:
             if self._data_connection is not None:
@@ -202,6 +235,9 @@ class OpenA3XXMessagingService:
             credentials=credentials,
             heartbeat=30,
             blocked_connection_timeout=10,
+            connection_attempts=5,
+            retry_delay=2.0,
+            socket_timeout=10,
         )
         try:
             if self._keepalive_connection is not None:
@@ -218,48 +254,96 @@ class OpenA3XXMessagingService:
 
     def _publisher_loop(self):
         while not self._stop_publisher.is_set():
-            try:
-                item = self._event_queue.get(timeout=0.5)
-            except Empty:
+            # Process any spooled files first (FIFO by filename)
+            files = self._spool_list_paths()
+            if not files:
+                # Wait for a wake signal, then loop
+                try:
+                    self._event_queue.get(timeout=0.5)
+                    try:
+                        self._event_queue.task_done()
+                    except Exception:
+                        pass
+                except Empty:
+                    pass
                 continue
 
-            hardware_board_id, extender_bus_bit_details = item
-            message = {
-                "hardware_board_id": hardware_board_id,
-                "extender_bit_id": extender_bus_bit_details["extender_bit_id"],
-                "extender_bit_name": extender_bus_bit_details["extender_bit_name"],
-                "extender_bus_id": extender_bus_bit_details["extender_bus_id"],
-                "extender_bus_name": extender_bus_bit_details["extender_bus_name"],
-                "input_selector_name": extender_bus_bit_details["input_selector_name"],
-                "input_selector_id": extender_bus_bit_details["input_selector_id"],
-                "timestamp": str(dt.datetime.now(dt.UTC)),
-            }
+            path = files[0]
             try:
-                if self.data_channel.is_closed:
-                    self.logger.warning("Data channel closed in publisher; reconnecting")
-                    self._connect_data_channel()
-                self.data_channel.basic_publish(
-                    exchange=self.rabbitmq_data_exchange,
-                    routing_key="*",
-                    body=json.dumps(message),
-                )
-                GPIO.output(FAULT_LED, GPIO.LOW)
+                message = self._spool_read(path)
             except Exception as ex:
-                # Attempt one reconnect and retry
-                self.logger.warning(f"Publish failed ({ex}); reconnecting and retrying once")
+                self.logger.warning(f"Failed reading spooled event {path.name}: {ex}; deleting file")
                 try:
-                    self._connect_data_channel()
+                    self._spool_delete(path)
+                except Exception:
+                    pass
+                continue
+
+            # Try to publish with backoff and reconnect
+            published = False
+            backoff = 0.5
+            for attempt in range(5):
+                try:
+                    if getattr(self, 'data_channel', None) is None or self.data_channel.is_closed:
+                        self.logger.warning("Data channel not open; reconnecting")
+                        self._connect_data_channel()
                     self.data_channel.basic_publish(
                         exchange=self.rabbitmq_data_exchange,
                         routing_key="*",
                         body=json.dumps(message),
                     )
-                except Exception as ex2:
-                    GPIO.output(FAULT_LED, GPIO.HIGH)
-                    self.logger.critical(f"Dropping hardware event after retry failed: {ex2}; message={message}")
-            finally:
-                # Always mark task done to avoid blocking
+                    GPIO.output(FAULT_LED, GPIO.LOW)
+                    published = True
+                    break
+                except Exception as ex:
+                    self.logger.warning(f"Publish attempt {attempt + 1} failed: {ex}")
+                    try:
+                        if self._data_connection is not None:
+                            self._data_connection.close()
+                    except Exception:
+                        pass
+                    time.sleep(backoff)
+                    backoff = min(5.0, backoff * 2)
+
+            if published:
                 try:
-                    self._event_queue.task_done()
-                except Exception:
-                    pass
+                    self._spool_delete(path)
+                except Exception as ex:
+                    self.logger.warning(f"Published but failed to delete spool file {path.name}: {ex}")
+            else:
+                GPIO.output(FAULT_LED, GPIO.HIGH)
+                self.logger.warning(f"Will retry later for spooled event {path.name}")
+
+    # ----- Spool helpers -----
+    def _spool_write_message(self, message: dict) -> None:
+        ts_ms = int(time.time() * 1000)
+        name = f"{ts_ms:013d}_{uuid.uuid4().hex}.json"
+        tmp = self._spool_path / (name + ".tmp")
+        final = self._spool_path / name
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(message, separators=(",", ":")))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, final)
+
+    def _spool_list_paths(self) -> list[Path]:
+        try:
+            files = [p for p in self._spool_path.iterdir() if p.is_file() and p.suffix == ".json"]
+            return sorted(files, key=lambda p: p.name)
+        except Exception:
+            return []
+
+    def _spool_read(self, path: Path) -> dict:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.loads(f.read())
+
+    def _spool_delete(self, path: Path) -> None:
+        try:
+            path.unlink(missing_ok=True)  # type: ignore[call-arg]
+        except TypeError:
+            # Python <3.8 compatibility
+            try:
+                if path.exists():
+                    path.unlink()
+            except Exception:
+                pass

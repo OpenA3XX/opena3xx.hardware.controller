@@ -1,4 +1,5 @@
 import logging
+import threading
 
 import board
 import time
@@ -26,6 +27,7 @@ class OpenA3XXHardwareService:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.messaging_service: OpenA3XXMessagingService = messaging_service
         self.hardware_board_id = hardware_board_id
+        self._monitor_stop_event = threading.Event()
 
     def bus_interrupt(self, port):
         """GPIO interrupt callback for extender bus IRQ lines.
@@ -64,23 +66,29 @@ class OpenA3XXHardwareService:
                 for pin in _bus_pins:
                     if int(pin["bus_bit"]) == int(pin_flag):
                         pin_value = pin["extender_bit_instance"].value
+                        pressed = not pin_value  # pull-up inputs: LOW means pressed
                         self.logger.debug(
                             f"Flag {pin_flag} -> bit {pin['bus_bit']} name={pin['extender_bit_name']} value={pin_value}"
                         )
-                        if not pin_value:
-                            if pin['input_selector_name'] is not None:
+                        if pin['input_selector_name'] is not None:
+                            try:
+                                GPIO.output(MESSAGING_LED, GPIO.HIGH)
+                                event = dict(pin)
+                                event["pressed"] = pressed
+                                self.messaging_service.publish_hardware_event(self.hardware_board_id, event)
+                                GPIO.output(MESSAGING_LED, GPIO.LOW)
+                                self.logger.warning(
+                                    f"Hardware Input Selector: {pin['input_selector_name']} ===> {'Pressed' if pressed else 'Released'}"
+                                )
                                 try:
-                                    GPIO.output(MESSAGING_LED, GPIO.HIGH)
-                                    self.messaging_service.publish_hardware_event(self.hardware_board_id, pin)
-                                    GPIO.output(MESSAGING_LED, GPIO.LOW)
-                                    self.logger.warning(
-                                        f"Hardware Input Selector: {pin['input_selector_name']} ===> Pressed"
-                                    )
-                                except OpenA3XXRabbitMqPublishingException as ex:
-                                    GPIO.output(FAULT_LED, GPIO.HIGH)
-                                    raise ex
-                            else:
-                                self.logger.debug("Interrupt from a non-mapped input selector; ignoring")
+                                    pin["last_value"] = pin_value
+                                except Exception:
+                                    pass
+                            except OpenA3XXRabbitMqPublishingException as ex:
+                                GPIO.output(FAULT_LED, GPIO.HIGH)
+                                raise ex
+                        else:
+                            self.logger.debug("Interrupt from a non-mapped input selector; ignoring")
                         break
         finally:
             # Always clear interrupts to release the IRQ line
@@ -293,6 +301,7 @@ class OpenA3XXHardwareService:
             output_selector_name=extender_bit.hardware_output_selector_fullname,
             output_selector_id=extender_bit.hardware_output_selector_id,
             extender_bit_instance=pin,
+            last_value=True,
         )
 
         self.extender_bus_bit_details.append(extender_bit_data_dict)
@@ -336,9 +345,131 @@ class OpenA3XXHardwareService:
                 int(r.get("bus_bit", 0)),
             ),
         )
+        self._log_grid_summary()
 
-        bus_table = tabulate(_select_columns(sorted_buses, bus_columns), headers=bus_columns, tablefmt='grid')
-        bit_table = tabulate(_select_columns(sorted_bits, bit_columns), headers=bit_columns, tablefmt='grid')
+    def _log_compact_summary(self) -> None:
+        def abbreviate(text: str | None, max_len: int = 12) -> str:
+            if not text:
+                return "-"
+            text = str(text).strip()
+            if len(text) <= max_len:
+                return text
+            return text[: max_len - 1] + "…"
 
-        self.logger.info(f"Extender Bus Details ↓\n{bus_table}")
-        self.logger.info(f"Extender Bus Bit Details ↓\n{bit_table}")
+        def colorize_tag(tag: str) -> str:
+            # Green for input, red for output
+            if tag == "I":
+                return "\x1b[32mI\x1b[0m"
+            if tag == "O":
+                return "\x1b[31mO\x1b[0m"
+            return tag
+
+        # Group bits by bus
+        bus_to_bits: dict[str, list[dict]] = {}
+        for row in self.extender_bus_bit_details:
+            bus_name = str(row.get("extender_bus_name", "?"))
+            bus_to_bits.setdefault(bus_name, []).append(row)
+
+        # Sort bus names and within each, sort by numeric bit
+        for bus_name in sorted(bus_to_bits.keys()):
+            rows = sorted(bus_to_bits[bus_name], key=lambda r: int(r.get("bus_bit", 0)))
+            tokens: list[str] = []
+            for r in rows:
+                selector = r.get("input_selector_name") or r.get("output_selector_name")
+                if not selector:
+                    continue  # omit unmapped pins to keep it compact
+                io_tag = "I" if r.get("is_input") else ("O" if r.get("is_output") else "?")
+                bit = int(r.get("bus_bit", 0))
+                tokens.append(f"{bit}:{abbreviate(selector, 14)}({colorize_tag(io_tag)})")
+
+            # If nothing mapped, still show a short notice
+            if not tokens:
+                line = f"{bus_name}: (no mapped IO selectors)"
+            else:
+                line = f"{bus_name}: " + " | ".join(tokens)
+            self.logger.info(line)
+
+    def _log_grid_summary(self, cell_len: int = 48) -> None:
+        # Build a grid: rows are bits 0..15, columns are bus names
+        def abbreviate(text: str | None, max_len: int = 24) -> str:
+            if not text:
+                return "-"
+            text = str(text).strip()
+            if len(text) <= max_len:
+                return text
+            return text[: max_len - 1] + "…"
+
+        def colorize_tag(tag: str) -> str:
+            if tag == "I":
+                return "\x1b[32mI\x1b[0m"
+            if tag == "O":
+                return "\x1b[31mO\x1b[0m"
+            return tag
+
+        # Collect bus names
+        bus_names = sorted({str(r.get("extender_bus_name", "?")) for r in self.extender_bus_bit_details})
+        # Map (bus, bit) -> (selector, tag)
+        grid_map: dict[tuple[str, int], tuple[str, str]] = {}
+        for r in self.extender_bus_bit_details:
+            bus = str(r.get("extender_bus_name", "?"))
+            bit = int(r.get("bus_bit", 0))
+            selector = r.get("input_selector_name") or r.get("output_selector_name")
+            if not selector:
+                continue
+            tag = "I" if r.get("is_input") else ("O" if r.get("is_output") else "?")
+            grid_map[(bus, bit)] = (str(selector), tag)
+
+        # Compose rows for bits 0..15
+        headers = ["Bit"] + bus_names
+        rows: list[list[str]] = []
+        for bit in range(16):
+            row: list[str] = [str(bit)]
+            for bus in bus_names:
+                sel_tag = grid_map.get((bus, bit))
+                if sel_tag is None:
+                    row.append("-")
+                else:
+                    selector, tag = sel_tag
+                    # Abbreviate selector only, then append colored tag
+                    max_selector_len = max(1, cell_len - 4)
+                    selector_abbrev = abbreviate(selector, max_selector_len)
+                    row.append(f"{selector_abbrev} ({colorize_tag(tag)})")
+            rows.append(row)
+
+        table = tabulate(rows, headers=headers, tablefmt='grid')
+        self.logger.info(f"Extender IO Grid (columns=buses, rows=bits) ↓\n{table}")
+
+    # --- Input monitor (fallback for missed IRQs) ---
+    def _start_input_monitor(self) -> None:
+        try:
+            t = threading.Thread(target=self._input_monitor_loop, name="io-input-monitor", daemon=True)
+            t.start()
+            self._input_monitor_thread = t
+        except Exception as ex:
+            self.logger.warning(f"Failed to start input monitor: {ex}")
+
+    def _input_monitor_loop(self) -> None:
+        while not self._monitor_stop_event.is_set():
+            try:
+                for bit in self.extender_bus_bit_details:
+                    if not bit.get("is_input"):
+                        continue
+                    pin = bit.get("extender_bit_instance")
+                    try:
+                        current = bool(pin.value)
+                    except Exception:
+                        continue
+                    last = bool(bit.get("last_value", current))
+                    if current != last and bit.get("input_selector_name") is not None:
+                        pressed = not current  # pull-up logic
+                        event = dict(bit)
+                        event["pressed"] = pressed
+                        try:
+                            GPIO.output(MESSAGING_LED, GPIO.HIGH)
+                            self.messaging_service.publish_hardware_event(self.hardware_board_id, event)
+                        finally:
+                            GPIO.output(MESSAGING_LED, GPIO.LOW)
+                        bit["last_value"] = current
+            except Exception:
+                pass
+            time.sleep(0.02)
